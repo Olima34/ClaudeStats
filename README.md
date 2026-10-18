@@ -4,6 +4,31 @@
 
 Tout est lu et calculé **en local** : aucune donnée ne quitte ton Mac.
 
+<p align="center">
+  <img src="docs/screenshots/overview.png" alt="Vue d'ensemble : chiffres clés, calendrier d'activité, activité au fil du temps et répartition par catégorie" width="900">
+</p>
+
+<table>
+  <tr>
+    <th>Rythme</th>
+    <th>Catégories</th>
+  </tr>
+  <tr>
+    <td valign="top"><img src="docs/screenshots/rhythm.png" alt="Rythme : semaine type, heures et jours favoris, chronologie, séries"></td>
+    <td valign="top"><img src="docs/screenshots/categories.png" alt="Catégories : répartition, évolution par semaine, détail par catégorie"></td>
+  </tr>
+  <tr>
+    <th>Claude au travail</th>
+    <th>Ton récap</th>
+  </tr>
+  <tr>
+    <td valign="top"><img src="docs/screenshots/tools.png" alt="Claude au travail : outils, commandes shell, langages, fichiers, modèles et tokens"></td>
+    <td valign="top"><img src="docs/screenshots/wrapped.png" alt="Ton récap : carte façon Wrapped exportable en PNG"></td>
+  </tr>
+</table>
+
+<sub>Captures réalisées avec des données fictives (mode `--demo`), pas avec de vraies sessions.</sub>
+
 > *English: a native macOS app that turns your local Claude Code / Cowork sessions into fun, private usage dashboards. The interface is in French.*
 
 > Projet personnel et non officiel, sans lien avec Anthropic. « Claude » est une marque d'Anthropic.
@@ -77,7 +102,17 @@ Chaque fichier lu est résumé dans un cache (`~/Library/Application Support/Cla
 ```bash
 swift build -c release
 .build/release/ClaudeStats --dump            # résumé texte des chiffres calculés
-.build/release/ClaudeStats --snapshot out/   # rend chaque page en PNG (--light, --period week, --page overview)
+.build/release/ClaudeStats --snapshot out/   # rend chaque page en PNG (--light, --period week, --page overview, --scale 2)
+.build/release/ClaudeStats --demo            # lance l'app avec des données fictives, sans lire le disque
+```
+
+`--demo` fonctionne aussi avec `--dump` et `--snapshot`. Les données de démonstration (`Analysis/DemoData.swift`) sont générées avec une graine fixe : environ 80 sessions sur quatre mois, datées par rapport au jour courant. Les captures de ce README en sortent :
+
+```bash
+for p in overview rhythm categories tools wrapped; do
+  .build/release/ClaudeStats --snapshot docs/screenshots --demo --scale 2 --page $p
+done
+pngquant --quality 80-95 --force --ext .png docs/screenshots/*.png   # optionnel : divise le poids par cinq
 ```
 
 Le code est organisé en trois couches : `Data/` (lecture rapide des JSONL, cache), `Analysis/` (dédoublonnage, statistiques, catégories, badges) et `UI/` (SwiftUI + Swift Charts).

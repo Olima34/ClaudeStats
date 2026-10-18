@@ -16,11 +16,11 @@ enum Entry {
     }
 }
 
-/// `ClaudeStats --dump [--force]` prints a summary of what the app computes, for checking numbers.
+/// `ClaudeStats --dump [--force] [--demo]` prints a summary of what the app computes, for checking numbers.
 enum Diagnostics {
     static func run(force: Bool) {
         let t0 = Date()
-        let raw = Loader.load(forceRescan: force) { _, _ in }
+        let raw = DemoData.isEnabled ? DemoData.make() : Loader.load(forceRescan: force) { _, _ in }
         let t1 = Date()
         let ds = Dataset.build(raw, overrides: [:])
         let t2 = Date()
@@ -69,7 +69,8 @@ enum Diagnostics {
 import SwiftUI
 import AppKit
 
-/// `ClaudeStats --snapshot <dir> [--light] [--period week|month|…]` renders every page to PNG files.
+/// `ClaudeStats --snapshot <dir> [--light] [--period week|month|…] [--page overview] [--scale 2] [--demo]` renders every page to PNG files.
+/// With `--demo`, the pages show the fictional demo data instead of what is on this Mac.
 @MainActor
 enum Snapshot {
     static func run(dir: String) {
@@ -77,7 +78,7 @@ enum Snapshot {
         let light = CommandLine.arguments.contains("--light")
         let appearance = NSAppearance(named: light ? .aqua : .darkAqua)!
         NSApp.appearance = appearance
-        let raw = Loader.load(forceRescan: false) { _, _ in }
+        let raw = DemoData.isEnabled ? DemoData.make() : Loader.load(forceRescan: false) { _, _ in }
         let model = AppModel(autoload: false)
         model.apply(raw: raw)
         if let i = CommandLine.arguments.firstIndex(of: "--period"), CommandLine.arguments.count > i + 1,
@@ -87,6 +88,9 @@ enum Snapshot {
         let only = CommandLine.arguments.firstIndex(of: "--page").flatMap { i in
             CommandLine.arguments.count > i + 1 ? Page(rawValue: CommandLine.arguments[i + 1]) : nil
         }
+        let scale = CommandLine.arguments.firstIndex(of: "--scale").flatMap { i in
+            CommandLine.arguments.count > i + 1 ? Double(CommandLine.arguments[i + 1]) : nil
+        } ?? 1
         if CommandLine.arguments.contains("--select") {
             model.selectedSession = model.stats.sessions.first(where: { $0.prompts > 3 })?.id
         }
@@ -101,16 +105,15 @@ enum Snapshot {
                 .environment(\.colorScheme, light ? .light : .dark)
             appearance.performAsCurrentDrawingAppearance {
                 let r = ImageRenderer(content: view)
-                r.scale = 1
-                guard let img = r.nsImage, let tiff = img.tiffRepresentation,
-                      let rep = NSBitmapImageRep(data: tiff),
-                      let png = rep.representation(using: .png, properties: [:]) else {
+                r.scale = scale
+                guard let cg = r.cgImage,
+                      let png = NSBitmapImageRep(cgImage: cg).representation(using: .png, properties: [:]) else {
                     print("failed \(page.rawValue)")
                     return
                 }
                 let url = URL(fileURLWithPath: dir).appendingPathComponent("\(page.rawValue).png")
                 try? png.write(to: url)
-                print("wrote \(url.path) \(Int(img.size.width))x\(Int(img.size.height))")
+                print("wrote \(url.path) \(cg.width)x\(cg.height)")
             }
         }
     }

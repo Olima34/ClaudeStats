@@ -76,7 +76,8 @@ final class AppModel: ObservableObject {
     private let overridesKey = "categoryOverrides"
 
     init(autoload: Bool = true) {
-        if let d = UserDefaults.standard.dictionary(forKey: overridesKey) as? [String: String] {
+        // Demo sessions have their own ids: the user's corrections do not apply to them.
+        if !DemoData.isEnabled, let d = UserDefaults.standard.dictionary(forKey: overridesKey) as? [String: String] {
             overrides = d.compactMapValues { Category(rawValue: $0) }
         }
         if autoload { load(force: false) }
@@ -103,7 +104,8 @@ final class AppModel: ObservableObject {
         let overrides = self.overrides
         let start = Date()
         Task.detached(priority: .userInitiated) {
-            let raw = Loader.load(forceRescan: force) { done, total in
+            // `--demo` shows fictional data instead of reading this Mac's sessions.
+            let raw = DemoData.isEnabled ? DemoData.make() : Loader.load(forceRescan: force) { done, total in
                 Task { @MainActor [weak self] in
                     guard let self, self.isLoading else { return }
                     self.phase = .loading(done: done, total: total)
@@ -121,7 +123,8 @@ final class AppModel: ObservableObject {
                 self.history = hf == StatsFilter() ? all : StatsEngine.compute(ds, filter: hf)
                 self.lastLoad = Date()
                 let secs = Date().timeIntervalSince(start)
-                self.loadInfo = "\(Fmt.int(ds.fileCount)) fichiers · \(raw.parsedFiles) relus en \(Fmt.dec(secs)) s"
+                self.loadInfo = DemoData.isEnabled ? "Données de démonstration (fictives)"
+                    : "\(Fmt.int(ds.fileCount)) fichiers · \(raw.parsedFiles) relus en \(Fmt.dec(secs)) s"
                 self.isRefreshing = false
                 withAnimation(.easeOut(duration: 0.35)) { self.phase = .ready }
             }
@@ -153,7 +156,7 @@ final class AppModel: ObservableObject {
 
     func setCategory(_ c: Category?, for sessionId: String) {
         if let c { overrides[sessionId] = c } else { overrides.removeValue(forKey: sessionId) }
-        UserDefaults.standard.set(overrides.mapValues(\.rawValue), forKey: overridesKey)
+        if !DemoData.isEnabled { UserDefaults.standard.set(overrides.mapValues(\.rawValue), forKey: overridesKey) }
         if let i = dataset.sessions.firstIndex(where: { $0.id == sessionId }) {
             dataset.sessions[i].category = c ?? dataset.sessions[i].autoCategory
         }

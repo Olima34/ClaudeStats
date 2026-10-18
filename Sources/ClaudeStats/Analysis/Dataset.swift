@@ -262,7 +262,7 @@ final class Dataset: @unchecked Sendable {
                     }
                 }
             }
-            s.model = modelCount.max(by: { $0.value < $1.value })?.key ?? (meta?.model ?? "")
+            s.model = modelCount.max(by: { ($0.value, $1.key) < ($1.value, $0.key) })?.key ?? (meta?.model ?? "")
             s.autoCategory = Categorizer.classify(title: s.title, prompts: humanTexts, cwd: s.cwd,
                                                   tools: toolCount, extensions: extCount)
             s.category = overrides[id] ?? s.autoCategory

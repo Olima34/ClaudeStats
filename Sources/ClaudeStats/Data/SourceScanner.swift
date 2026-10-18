@@ -149,7 +149,7 @@ enum SourceScanner {
             for (k, v) in su {
                 if let d = v as? [String: Any], let c = d["usageCount"] as? Int, c > 0 { skills.append((k, c)) }
             }
-            skills.sort { $0.1 > $1.1 }
+            skills.sort { ($0.1, $1.0) > ($1.1, $0.0) }
         }
         return (info, skills)
     }

@@ -7,6 +7,9 @@ enum Category: String, CaseIterable, Codable, Identifiable, Sendable {
 
     var id: String { rawValue }
 
+    /// Position in `allCases`, used to break ties the same way on every launch.
+    var rank: Int { Category.allCases.firstIndex(of: self) ?? 0 }
+
     var label: String {
         switch self {
         case .dev: return "Développement"
@@ -221,7 +224,8 @@ enum Categorizer {
         toolSignals(tools: tools, extensions: extensions, into: &s)
         // Research words are very generic: dampen them a little.
         if let r = s[.research] { s[.research] = r * 0.6 }
-        guard let best = s.max(by: { $0.value < $1.value }), best.value >= 1.5 else { return .other }
+        // On a tie, the category listed first wins (dictionary order changes from one launch to the next).
+        guard let best = s.max(by: { ($0.value, $1.key.rank) < ($1.value, $0.key.rank) }), best.value >= 1.5 else { return .other }
         return best.key
     }
 }

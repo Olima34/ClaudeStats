@@ -127,7 +127,7 @@ struct ProjectStat: Identifiable, Sendable {
     var last: Double = 0
     var categorySeconds: [Category: Double] = [:]
     var weekly: [Int: Double] = [:]
-    var mainCategory: Category { categorySeconds.max(by: { $0.value < $1.value })?.key ?? .other }
+    var mainCategory: Category { categorySeconds.max(by: { ($0.value, $1.key.rank) < ($1.value, $0.key.rank) })?.key ?? .other }
 }
 
 struct CategoryStat: Identifiable, Sendable {
@@ -549,12 +549,14 @@ enum StatsEngine {
         st.peakWeekday = weekdays.max(by: { ($0.prompts, $0.seconds) < ($1.prompts, $1.seconds) })?.weekday ?? 0
         let weekendSecs = weekdays[5].seconds + weekdays[6].seconds
         st.weekendShare = st.activeSeconds > 0 ? weekendSecs / st.activeSeconds : 0
-        st.topDays = Array(days.values.filter { $0.prompts > 0 }.sorted { $0.prompts > $1.prompts }.prefix(10))
+        st.topDays = Array(days.values.filter { $0.prompts > 0 }
+            .sorted { ($0.prompts, $0.seconds, $1.day) > ($1.prompts, $1.seconds, $0.day) }.prefix(10))
         st.promptsPerActiveDay = st.activeDays > 0 ? Double(st.promptCount) / Double(st.activeDays) : 0
         st.secondsPerActiveDay = st.activeDays > 0 ? st.activeSeconds / Double(st.activeDays) : 0
 
         // MARK: Sessions
-        let sessionRows = rows.values.filter { $0.prompts > 0 || $0.messages > 0 }.sorted { $0.start > $1.start }
+        let sessionRows = rows.values.filter { $0.prompts > 0 || $0.messages > 0 }
+            .sorted { $0.start != $1.start ? $0.start > $1.start : $0.id < $1.id }
         st.sessions = sessionRows
         st.sessionCount = sessionRows.count
         let withPrompts = sessionRows.filter { $0.prompts > 0 }
@@ -613,16 +615,18 @@ enum StatsEngine {
             projAcc[p]?.weekly[lt.day - lt.weekday, default: 0] += seg.duration
             catWeekAcc["\(lt.day - lt.weekday)|\(ds.sessions[seg.session].category.rawValue)", default: 0] += seg.duration
         }
-        st.projects = projAcc.values.sorted { $0.seconds > $1.seconds }
+        // Equal values are ordered by name so the result does not depend on dictionary order.
+        st.projects = projAcc.values.sorted { $0.seconds != $1.seconds ? $0.seconds > $1.seconds : $0.name < $1.name }
         for (cat, projs) in catProj {
-            catAcc[cat]?.topProjects = projs.sorted { $0.value > $1.value }.prefix(4).map { NamedCount(name: $0.key, count: Int($0.value)) }
+            catAcc[cat]?.topProjects = projs.sorted { ($0.value, $1.key) > ($1.value, $0.key) }.prefix(4)
+                .map { NamedCount(name: $0.key, count: Int($0.value)) }
         }
-        st.categories = catAcc.values.sorted { $0.seconds > $1.seconds }
+        st.categories = catAcc.values.sorted { $0.seconds != $1.seconds ? $0.seconds > $1.seconds : $0.category.rank < $1.category.rank }
         st.categoryWeeks = catWeekAcc.compactMap { k, v in
             let parts = k.split(separator: "|")
             guard parts.count == 2, let d = Int(parts[0]), let c = Category(rawValue: String(parts[1])) else { return nil }
             return CategoryWeek(week: date(ofDay: d), category: c, hours: v / 3600)
-        }.sorted { $0.week < $1.week }
+        }.sorted { $0.week != $1.week ? $0.week < $1.week : $0.category.rank < $1.category.rank }
 
         // MARK: Tools & models
         st.tools = sortedCounts(toolAcc).map { NamedCount(name: $0.name, count: $0.count) }
@@ -636,12 +640,12 @@ enum StatsEngine {
         st.skills = Array(sortedCounts(allSkills).prefix(12))
         st.mcpServers = sortedCounts(mcpAcc)
         st.webDomains = Array(sortedCounts(domainAcc).prefix(12))
-        st.models = modelAcc.values.sorted { $0.messages > $1.messages }
+        st.models = modelAcc.values.sorted { $0.messages != $1.messages ? $0.messages > $1.messages : $0.label < $1.label }
         st.modelWeeks = modelWeekAcc.compactMap { k, v in
             let parts = k.split(separator: "|", maxSplits: 1)
             guard parts.count == 2, let d = Int(parts[0]) else { return nil }
             return ModelWeek(week: date(ofDay: d), label: String(parts[1]), messages: v)
-        }.sorted { $0.week < $1.week }
+        }.sorted { $0.week != $1.week ? $0.week < $1.week : $0.label < $1.label }
 
         // MARK: Style
         st.style = style(P, M)
@@ -726,8 +730,8 @@ enum StatsEngine {
                 display[key, default: [:]][t, default: 0] += 1
             }
         }
-        s.words = wordAcc.sorted { $0.value > $1.value }.prefix(80).map { k, v in
-            NamedCount(name: display[k]?.max(by: { $0.value < $1.value })?.key ?? k, count: v)
+        s.words = wordAcc.sorted { ($0.value, $1.key) > ($1.value, $0.key) }.prefix(80).map { k, v in
+            NamedCount(name: display[k]?.max(by: { ($0.value, $1.key) < ($1.value, $0.key) })?.key ?? k, count: v)
         }
         let langTotal = max(1, langAcc.values.reduce(0, +))
         s.languages = Lang.allCases.compactMap { l in

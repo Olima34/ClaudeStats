@@ -12,19 +12,19 @@ struct BadgesPage: View {
 
         VStack(alignment: .leading, spacing: 18) {
             PageHeader(title: "Tes badges", subtitle: "Des petits défis débloqués au fil de tes sessions. Calculés sur toute ton histoire avec Claude.")
-            Card(padding: 22) {
+            Card(padding: 22, featured: true) {
                 HStack(spacing: 24) {
                     ZStack {
                         ProgressRing(progress: Double(unlocked) / Double(max(1, list.count)), lineWidth: 10)
                             .frame(width: 96, height: 96)
                         VStack(spacing: 0) {
-                            Text("\(unlocked)").font(.serif(30)).foregroundStyle(Theme.text)
+                            Text("\(unlocked)").font(.display(30)).foregroundStyle(Theme.text)
                             Text("sur \(list.count)").font(.ui(10.5)).foregroundStyle(Theme.text3)
                         }
                     }
                     VStack(alignment: .leading, spacing: 6) {
                         Text(unlocked == list.count ? "Collection complète !" : "\(unlocked) badges débloqués")
-                            .font(.serif(26)).foregroundStyle(Theme.text)
+                            .font(.display(26)).foregroundStyle(Theme.text)
                         if let next = list.first(where: { !$0.unlocked }) {
                             Text("Le plus proche : « \(next.title) », \(Fmt.uncap(next.detail)) (\(Fmt.pct(next.progress))).")
                                 .font(.ui(13)).foregroundStyle(Theme.text2)
@@ -52,17 +52,17 @@ struct BadgeCard: View {
                     ProgressRing(progress: a.progress, tint: a.unlocked ? Theme.accent : Theme.text3, lineWidth: 4)
                         .frame(width: 66, height: 66)
                     Circle()
-                        .fill(a.unlocked ? Theme.accent.opacity(0.16) : Theme.track)
+                        .fill(a.unlocked ? Theme.fill3 : Theme.fill1)
                         .frame(width: 52, height: 52)
                     Image(systemName: a.symbol)
-                        .font(.system(size: 21, weight: .medium))
-                        .foregroundStyle(a.unlocked ? Theme.accent : Theme.text3)
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundStyle(a.unlocked ? Theme.text : Theme.text3)
                     if !a.unlocked {
                         Image(systemName: "lock.fill")
                             .font(.ui(9, .bold))
                             .foregroundStyle(Theme.text3)
                             .padding(4)
-                            .background(Circle().fill(Theme.card))
+                            .background(Circle().fill(Theme.cardRaised))
                             .offset(x: 24, y: 24)
                     }
                 }
@@ -77,16 +77,18 @@ struct BadgeCard: View {
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
-                Text(a.unlocked ? "Débloqué" : "\(Fmt.compact(a.current)) / \(Fmt.compact(a.goal)) \(a.unit)")
-                    .font(.ui(10.5, .medium))
-                    .foregroundStyle(a.unlocked ? Theme.accent : Theme.text3)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Capsule().fill(a.unlocked ? Theme.accent.opacity(0.12) : Theme.track))
+                Label(a.unlocked ? "Débloqué" : "\(Fmt.compact(a.current)) / \(Fmt.compact(a.goal)) \(a.unit)",
+                      systemImage: a.unlocked ? "checkmark" : "lock")
+                    .font(.ui(11, .medium))
+                    .foregroundStyle(a.unlocked ? Theme.text2 : Theme.text3)
+                    .monospacedDigit()
+                    .padding(.horizontal, 7)
+                    .frame(height: 20)
+                    .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Theme.fill2))
             }
             .frame(maxWidth: .infinity)
         }
-        .opacity(a.unlocked ? 1 : 0.8)
+        .opacity(a.unlocked ? 1 : 0.75)
         .onHover { h in withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) { hovering = h } }
     }
 }

@@ -10,11 +10,11 @@ struct SourcesSheet: View {
         VStack(alignment: .leading, spacing: 18) {
             HStack {
                 ClaudeSpark(size: 22)
-                Text("Sources de données").font(.serif(24)).foregroundStyle(Theme.text)
+                Text("Sources de données").font(.display(22, .bold)).foregroundStyle(Theme.text)
                 Spacer()
                 Button { dismiss() } label: {
                     Image(systemName: "xmark").font(.ui(11, .bold)).foregroundStyle(Theme.text2)
-                        .frame(width: 26, height: 26).background(Circle().fill(Theme.track))
+                        .frame(width: 26, height: 26).background(Circle().fill(Theme.fill2))
                 }
                 .buttonStyle(.plain)
                 .keyboardShortcut(.cancelAction)
@@ -78,9 +78,9 @@ struct SourceRow: View {
         HStack(spacing: 12) {
             Image(systemName: symbol)
                 .font(.ui(13))
-                .foregroundStyle(Theme.accent)
+                .foregroundStyle(Theme.text2)
                 .frame(width: 32, height: 32)
-                .background(RoundedRectangle(cornerRadius: 8).fill(Theme.accent.opacity(0.12)))
+                .background(RoundedRectangle(cornerRadius: Theme.radiusInner, style: .continuous).fill(Theme.fill2))
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.ui(13, .medium)).foregroundStyle(Theme.text)
                 Text(path).font(.mono(10.5)).foregroundStyle(Theme.text3).lineLimit(1).truncationMode(.middle)
@@ -89,8 +89,7 @@ struct SourceRow: View {
             Text("\(Fmt.int(count)) \(unit)").font(.ui(12)).foregroundStyle(count > 0 ? Theme.text2 : Theme.text3)
         }
         .padding(12)
-        .background(RoundedRectangle(cornerRadius: 10).fill(Theme.card))
-        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Theme.border))
+        .surface(radius: 10)
     }
 }
 
@@ -106,7 +105,7 @@ struct MenuBarPanel: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 8) {
                 ClaudeSpark(size: 18)
-                Text("Aujourd'hui avec Claude").font(.serif(16)).foregroundStyle(Theme.text)
+                Text("Aujourd'hui avec Claude").font(.ui(14, .semibold)).foregroundStyle(Theme.text)
                 Spacer()
                 PixelMascot(pixel: 3)
             }

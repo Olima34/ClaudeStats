@@ -54,22 +54,22 @@ struct LearnPage: View {
                         VStack(alignment: .leading, spacing: 10) {
                             HStack(spacing: 10) {
                                 Image(systemName: e.symbol)
-                                    .font(.ui(14, .medium))
-                                    .foregroundStyle(Theme.accent)
-                                    .frame(width: 32, height: 32)
-                                    .background(RoundedRectangle(cornerRadius: 9).fill(Theme.accent.opacity(0.13)))
-                                Text(e.term).font(.serif(20)).foregroundStyle(Theme.text)
+                                    .font(.ui(14))
+                                    .foregroundStyle(Theme.text2)
+                                    .frame(width: 36, height: 36)
+                                    .background(RoundedRectangle(cornerRadius: Theme.radiusInner, style: .continuous).fill(Theme.fill2))
+                                Text(e.term).font(.display(17)).foregroundStyle(Theme.text)
                             }
                             Text(e.text).font(.ui(12.5)).foregroundStyle(Theme.text2).fixedSize(horizontal: false, vertical: true)
                             if !e.mine.isEmpty {
                                 HStack(alignment: .top, spacing: 6) {
                                     Image(systemName: "person.crop.circle").font(.ui(11)).foregroundStyle(Theme.accent)
-                                    Text("Chez toi : ").font(.ui(12, .semibold)).foregroundStyle(Theme.accent)
-                                        + Text(e.mine).font(.ui(12)).foregroundStyle(Theme.text)
+                                    Text("Chez toi : ").font(.ui(12, .semibold)).foregroundStyle(Theme.text)
+                                        + Text(e.mine).font(.ui(12)).foregroundStyle(Theme.text2)
                                 }
                                 .padding(10)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(RoundedRectangle(cornerRadius: 9).fill(Theme.accent.opacity(0.08)))
+                                .background(RoundedRectangle(cornerRadius: Theme.radiusInner, style: .continuous).fill(Theme.fill1))
                             }
                         }
                     }

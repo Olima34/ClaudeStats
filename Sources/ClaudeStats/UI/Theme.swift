@@ -19,86 +19,129 @@ extension Color {
 
     /// A color that follows the light / dark appearance.
     static func adaptive(light: UInt32, dark: UInt32, alpha: CGFloat = 1) -> Color {
+        adaptive(light: (light, alpha), dark: (dark, alpha))
+    }
+
+    /// A color that follows the light / dark appearance, with its own opacity in each.
+    static func adaptive(light: (UInt32, CGFloat), dark: (UInt32, CGFloat)) -> Color {
         Color(nsColor: NSColor(name: nil) { appearance in
             appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-                ? NSColor(hex: dark, alpha: alpha)
-                : NSColor(hex: light, alpha: alpha)
+                ? NSColor(hex: dark.0, alpha: dark.1)
+                : NSColor(hex: light.0, alpha: light.1)
         })
     }
 }
 
+/// "Graphite" design system (design/design_system_macos27.md): cool neutrals,
+/// glass and light for depth, and a single accent used sparingly.
 enum Theme {
-    // Surfaces, a shade darker than the Claude desktop app.
-    static let bg = Color.adaptive(light: 0xF4F3EF, dark: 0x141413)
-    static let sidebar = Color.adaptive(light: 0xEBE9E2, dark: 0x0F0F0E)
-    static let card = Color.adaptive(light: 0xFCFBF9, dark: 0x1B1B1A)
-    static let cardRaised = Color.adaptive(light: 0xFFFFFF, dark: 0x222221)
-    static let hover = Color.adaptive(light: 0xE2E0D8, dark: 0x222221)
-    static let selected = Color.adaptive(light: 0xDCD9D0, dark: 0x2A2A28)
-    static let border = Color.adaptive(light: 0xDEDBD1, dark: 0x2A2A28)
-    static let borderStrong = Color.adaptive(light: 0xCCC8BC, dark: 0x3A3A37)
-    static let track = Color.adaptive(light: 0xE6E3DA, dark: 0x252523)
+    // Surfaces
+    /// The inset stage that holds the pages.
+    static let bg = Color.adaptive(light: 0xF6F6F8, dark: 0x121215)
+    /// Under the glass sidebar, when the window material is unavailable.
+    static let window = Color.adaptive(light: 0xE6E7EA, dark: 0x0B0C0E)
+    static let card = Color.adaptive(light: 0xFFFFFF, dark: 0x1A1A1E)
+    /// Top of the card gradient: light comes from above.
+    static let cardTop = Color.adaptive(light: 0xFFFFFF, dark: 0x1F1F23)
+    static let cardRaised = Color.adaptive(light: 0xFFFFFF, dark: 0x232328)
+    /// Popovers, menus, palette, status module.
+    static let floating = Color.adaptive(light: (0xFFFFFF, 0.80), dark: (0x202025, 0.82))
+
+    // Neutral fills for controls, tracks and hovers.
+    static let fill1 = Color.adaptive(light: (0x000000, 0.04), dark: (0xFFFFFF, 0.05))
+    static let fill2 = Color.adaptive(light: (0x000000, 0.06), dark: (0xFFFFFF, 0.08))
+    static let fill3 = Color.adaptive(light: (0x000000, 0.08), dark: (0xFFFFFF, 0.11))
+    static let hover = fill1
+    static let selected = fill3
+
+    // Borders & light
+    static let border = Color.adaptive(light: (0x000000, 0.07), dark: (0xFFFFFF, 0.07))
+    static let borderStrong = Color.adaptive(light: (0x000000, 0.12), dark: (0xFFFFFF, 0.12))
+    /// 1 px specular highlight on the top edge of raised surfaces.
+    static let rim = Color.adaptive(light: (0xFFFFFF, 0.9), dark: (0xFFFFFF, 0.10))
+    static let shadow = Color.adaptive(light: (0x000000, 0.06), dark: (0x000000, 0.35))
 
     // Text
-    static let text = Color.adaptive(light: 0x1F1E1D, dark: 0xF4F2EC)
-    static let text2 = Color.adaptive(light: 0x5F5D57, dark: 0xB4B1A7)
-    static let text3 = Color.adaptive(light: 0x8C897F, dark: 0x7F7C73)
+    static let text = Color.adaptive(light: (0x000000, 0.88), dark: (0xFFFFFF, 0.94))
+    static let text2 = Color.adaptive(light: (0x000000, 0.58), dark: (0xFFFFFF, 0.62))
+    static let text3 = Color.adaptive(light: (0x000000, 0.40), dark: (0xFFFFFF, 0.40))
 
-    // Accent (Claude blue)
-    static let accentHex: UInt32 = 0x4C9AE6
-    static let accent = Color.adaptive(light: 0x2C84DB, dark: accentHex)
-    static let accentDeep = Color.adaptive(light: 0x1F6CC0, dark: 0x2C84DB)
-    static let accentSoft = Color.adaptive(light: 0xDCE9F7, dark: 0x16222F)
+    // Accent: the only hue of the interface (Claude terracotta).
+    static let accentHex: UInt32 = 0xD8795A
+    static let accent = Color.adaptive(light: 0xD05F39, dark: accentHex)
+    static let accentDeep = Color.adaptive(light: 0xB4502E, dark: 0xC4613F)
+    static let accentSoft = Color.adaptive(light: (0xD05F39, 0.12), dark: (accentHex, 0.14))
+    static let accentRim = Color.adaptive(light: (0xD05F39, 0.45), dark: (accentHex, 0.55))
     /// Claude's own orange, kept for the logo and the pixel mascot.
     static let brandHex: UInt32 = 0xD97757
     static let brand = Color(hex: brandHex)
-    static let matrix = Color.adaptive(light: 0x9A9488, dark: 0x4F6577)
+    static let matrix = Color.adaptive(light: 0x9A9AA0, dark: 0x4A4C55)
 
-    /// Palette for categorical charts, led by the Claude blue.
+    // Semantic, for real states only.
+    static let positive = Color(hex: 0x4CB782)
+    static let warning = Color(hex: 0xE0A443)
+    static let negative = Color(hex: 0xE5675C)
+
+    // Charts: one neutral for the data, the accent for the insight.
+    static let chartNeutral = Color.adaptive(light: (0x000000, 0.22), dark: (0xFFFFFF, 0.26))
+    static let chartGrid = Color.adaptive(light: (0x000000, 0.06), dark: (0xFFFFFF, 0.06))
+    static let track = Color.adaptive(light: (0x000000, 0.05), dark: (0xFFFFFF, 0.06))
+    static let other = Color.adaptive(light: (0x000000, 0.18), dark: (0xFFFFFF, 0.20))
+
+    /// Muted categorical palette, led by the accent.
     static let palette: [Color] = [
-        accent,               // blue
-        Color(hex: 0x5BA3A0), // teal
-        Color(hex: 0x8DA47E), // sage
-        Color(hex: 0xD4A27F), // kraft
-        Color(hex: 0x9B87C4), // lavender
-        Color(hex: 0xC46686), // rose
-        Color(hex: 0x7C83D6), // indigo
-        Color(hex: 0xCBB26A), // ochre
-        Color(hex: 0x8E8B82), // stone
-        Color(hex: 0xB0856A)  // clay
+        accent,
+        Color.adaptive(light: 0x5E7697, dark: 0x7F95B2), // slate
+        Color.adaptive(light: 0x6E8A68, dark: 0x8FA58A), // sage
+        Color.adaptive(light: 0xA8925F, dark: 0xC2AE8C), // sand
+        Color.adaptive(light: 0x8371A0, dark: 0xA190B8), // lavender
+        Color.adaptive(light: 0x56606B, dark: 0x6F7A86), // steel
+        Color.adaptive(light: 0x5F8C8A, dark: 0x82AAA7), // sea
+        Color.adaptive(light: 0x9A7560, dark: 0xB89A86), // clay
+        Color.adaptive(light: 0x7D7470, dark: 0x9C928C), // stone
     ]
 
     static func color(_ c: Category) -> Color {
         switch c {
         case .dev: return palette[0]
         case .study: return palette[1]
-        case .business: return palette[2]
+        case .design: return palette[2]
         case .writing: return palette[3]
-        case .design: return palette[5]
-        case .data: return palette[6]
-        case .research: return palette[4]
-        case .automation: return palette[7]
-        case .personal: return palette[9]
-        case .other: return palette[8]
+        case .automation: return palette[4]
+        case .data: return palette[5]
+        case .research: return palette[6]
+        case .business: return palette[7]
+        case .personal: return palette[8]
+        case .other: return other
         }
     }
 
     static func color(index: Int) -> Color { palette[abs(index) % palette.count] }
 
-    /// Heat scale from the track color to full blue.
+    /// Five-step heat scale, from the empty track to the full accent.
     static func heat(_ t: Double) -> Color {
         if t <= 0 { return track }
-        let steps: [Double] = [0.22, 0.42, 0.65, 0.85, 1.0]
-        let v = steps.first(where: { t <= $0 }) ?? 1
-        return accent.opacity(0.18 + 0.82 * v)
+        switch t {
+        case ..<0.3: return accent.opacity(0.2)
+        case ..<0.55: return accent.opacity(0.38)
+        case ..<0.8: return accent.opacity(0.62)
+        default: return accent
+        }
     }
+
+    // Radii: the stage is concentric with the window (inner = outer − inset).
+    static let stageInset: CGFloat = 8
+    static let radiusStage: CGFloat = 14
+    static let radiusCard: CGFloat = 12
+    static let radiusInner: CGFloat = 8
 }
 
 // MARK: - Typography
 
 extension Font {
-    static func serif(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font {
-        .system(size: size, weight: weight, design: .serif)
+    /// Numbers and titles: SF Pro, heavier than body text.
+    static func display(_ size: CGFloat, _ weight: Font.Weight = .semibold) -> Font {
+        .system(size: size, weight: weight)
     }
     static func ui(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font {
         .system(size: size, weight: weight)

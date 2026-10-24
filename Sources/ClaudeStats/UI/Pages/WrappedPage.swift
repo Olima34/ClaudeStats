@@ -65,10 +65,10 @@ struct WrappedCard: View {
     var name: String
     var animated = true
 
-    private let ink = Color(hex: 0xF4F2EC)
-    private let ink2 = Color(hex: 0xB4B1A7)
-    private let ink3 = Color(hex: 0x86837A)
-    private let blue = Color(hex: Theme.accentHex)
+    private let ink = Color(hex: 0xF5F5F7)
+    private let ink2 = Color(hex: 0xA9A9B0)
+    private let ink3 = Color(hex: 0x76767E)
+    private let accent = Color(hex: Theme.accentHex)
     private let brand = Color(hex: Theme.brandHex)
     private let tile = Color.white.opacity(0.05)
 
@@ -79,7 +79,7 @@ struct WrappedCard: View {
             HStack(spacing: 10) {
                 ClaudeSpark(size: 26, color: brand, animate: animated)
                 Text("Mon récap Claude")
-                    .font(.serif(17, .medium))
+                    .font(.ui(15, .semibold))
                     .foregroundStyle(ink)
                 Spacer()
                 Text(rangeText(s))
@@ -93,9 +93,9 @@ struct WrappedCard: View {
                 HStack(spacing: 12) {
                     Image(systemName: persona.symbol)
                         .font(.system(size: 30, weight: .medium))
-                        .foregroundStyle(blue)
+                        .foregroundStyle(accent)
                     Text(persona.title)
-                        .font(.serif(40))
+                        .font(.display(36, .bold))
                         .foregroundStyle(ink)
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
@@ -118,7 +118,7 @@ struct WrappedCard: View {
                     Text("TOP PROJETS").font(.ui(10, .semibold)).tracking(0.8).foregroundStyle(ink3)
                     ForEach(Array(s.projects.prefix(3).enumerated()), id: \.offset) { i, p in
                         HStack(spacing: 8) {
-                            Text("\(i + 1)").font(.serif(15)).foregroundStyle(blue).frame(width: 14)
+                            Text("\(i + 1)").font(.display(15)).foregroundStyle(accent).frame(width: 14)
                             Text(p.name).font(.ui(13, .medium)).foregroundStyle(ink).lineLimit(1)
                             Spacer()
                             Text(Fmt.hours(p.seconds)).font(.ui(11.5)).foregroundStyle(ink3)
@@ -141,7 +141,7 @@ struct WrappedCard: View {
             }
             HStack(alignment: .bottom) {
                 Text(funLine(s))
-                    .font(.serif(14))
+                    .font(.ui(14))
                     .italic()
                     .foregroundStyle(ink2)
                     .fixedSize(horizontal: false, vertical: true)
@@ -156,19 +156,18 @@ struct WrappedCard: View {
         .frame(width: 640)
         .background(
             ZStack {
-                LinearGradient(colors: [Color(hex: 0x1E1E1D), Color(hex: 0x0E0E0D)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                RadialGradient(colors: [blue.opacity(0.28), .clear], center: .topTrailing, startRadius: 10, endRadius: 380)
-                MatrixBackdrop(seed: 99, opacity: 0.25)
-                    .mask(LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .center))
+                LinearGradient(colors: [Color(hex: 0x1C1C20), Color(hex: 0x0D0D10)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                RadialGradient(colors: [accent.opacity(0.22), .clear], center: .topLeading, startRadius: 10, endRadius: 420)
             }
         )
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(Color.white.opacity(0.08)))
+        .overlay(TopRim(radius: 24, color: .white.opacity(0.14)))
     }
 
     private func big(_ value: String, _ label: String) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(value).font(.serif(27)).foregroundStyle(ink).lineLimit(1).minimumScaleFactor(0.6)
+            Text(value).font(.display(26)).foregroundStyle(ink).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
             Text(label).font(.ui(11)).foregroundStyle(ink3)
         }
         .padding(14)
@@ -178,7 +177,7 @@ struct WrappedCard: View {
 
     private func line(_ symbol: String, _ text: String) -> some View {
         HStack(spacing: 8) {
-            Image(systemName: symbol).font(.ui(11)).foregroundStyle(blue).frame(width: 16)
+            Image(systemName: symbol).font(.ui(11)).foregroundStyle(accent).frame(width: 16)
             Text(text).font(.ui(12.5)).foregroundStyle(ink).lineLimit(1)
         }
     }

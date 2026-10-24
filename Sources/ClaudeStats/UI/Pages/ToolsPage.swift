@@ -12,25 +12,24 @@ struct ToolsPage: View {
                 StatTile(symbol: "hammer", value: Fmt.compact(s.toolCalls), label: "Actions effectuées",
                          detail: "\(Fmt.dec(Double(s.toolCalls) / Double(max(1, s.promptCount)))) par message envoyé")
                 StatTile(symbol: "terminal", value: Fmt.compact(s.bashCommands), label: "Commandes shell",
-                         detail: s.shellVerbs.first.map { "La plus fréquente : \($0.name)" }, tint: Theme.palette[1])
+                         detail: s.shellVerbs.first.map { "La plus fréquente : \($0.name)" })
                 StatTile(symbol: "doc.on.doc", value: Fmt.int(s.filesTouched), label: "Fichiers modifiés",
-                         detail: "\(Fmt.compact(s.filesRead)) lectures de fichiers", tint: Theme.palette[2])
+                         detail: "\(Fmt.compact(s.filesRead)) lectures de fichiers")
                 StatTile(symbol: "plus.forwardslash.minus", value: "+\(Fmt.compact(s.linesAdded))", label: "Lignes ajoutées",
-                         detail: "−\(Fmt.compact(s.linesRemoved)) supprimées", tint: Theme.palette[3])
+                         detail: "−\(Fmt.compact(s.linesRemoved)) supprimées")
                 StatTile(symbol: "globe", value: Fmt.int(s.webSearches), label: "Recherches web",
-                         detail: "\(Fmt.int(s.webFetches)) pages lues", tint: Theme.palette[4])
+                         detail: "\(Fmt.int(s.webFetches)) pages lues")
                 StatTile(symbol: "person.3", value: Fmt.int(s.agentsLaunched), label: "Sous-agents lancés",
-                         detail: "\(Fmt.int(s.workflows)) workflows multi-agents", tint: Theme.palette[5])
+                         detail: "\(Fmt.int(s.workflows)) workflows multi-agents")
                 StatTile(symbol: "brain", value: Fmt.duration(s.thinkingSeconds), label: "Temps de réflexion",
-                         detail: "Raisonnement interne avant de répondre", tint: Theme.palette[6])
+                         detail: "Raisonnement interne avant de répondre")
                 StatTile(symbol: "arrow.down.right.and.arrow.up.left", value: Fmt.int(s.compactions), label: "Compactages",
-                         detail: "Contexte résumé pour continuer", tint: Theme.palette[7])
+                         detail: "Contexte résumé pour continuer")
             }
 
             HStack(alignment: .top, spacing: 18) {
                 Panel(title: "Outils favoris de Claude", subtitle: "Les 12 outils les plus appelés", symbol: "wrench.and.screwdriver") {
-                    RankList(items: s.tools.map { NamedCount(name: ToolNames.pretty($0.name), count: $0.count) }, limit: 12,
-                             tint: { i, _ in Theme.color(index: i % 3 == 0 ? 0 : (i % 3 == 1 ? 1 : 2)) })
+                    RankList(items: s.tools.map { NamedCount(name: ToolNames.pretty($0.name), count: $0.count) }, limit: 12, highlightLeader: true)
                 }
                 .frame(maxWidth: .infinity)
                 Panel(title: "Par famille", subtitle: "À quoi servent ces actions", symbol: "square.stack.3d.up") {
@@ -43,17 +42,17 @@ struct ToolsPage: View {
 
             HStack(alignment: .top, spacing: 18) {
                 Panel(title: "Commandes shell", subtitle: "Les programmes que Claude lance le plus", symbol: "terminal") {
-                    RankList(items: s.shellVerbs, limit: 10, tint: { _, _ in Theme.palette[1] })
+                    RankList(items: s.shellVerbs, limit: 10)
                 }
                 Panel(title: "Langages écrits", subtitle: "Lignes ajoutées par type de fichier", symbol: "chevron.left.forwardslash.chevron.right") {
-                    RankList(items: s.codeLanguages, limit: 10, tint: { i, _ in Theme.color(index: i) },
+                    RankList(items: s.codeLanguages, limit: 10,
                              valueText: { "\(Fmt.compact($0.count)) lignes" })
                 }
             }
 
             HStack(alignment: .top, spacing: 18) {
                 Panel(title: "Fichiers les plus retouchés", subtitle: "Nombre de modifications", symbol: "doc.badge.ellipsis") {
-                    RankList(items: s.topFiles, limit: 10, tint: { _, _ in Theme.palette[3] },
+                    RankList(items: s.topFiles, limit: 10,
                              nameText: { f in
                                  let url = URL(fileURLWithPath: f.name)
                                  return url.deletingLastPathComponent().lastPathComponent + "/" + url.lastPathComponent
@@ -61,10 +60,10 @@ struct ToolsPage: View {
                 }
                 VStack(spacing: 18) {
                     Panel(title: "Sous-agents", subtitle: "Types d'agents délégués", symbol: "person.3.sequence") {
-                        RankList(items: s.subagentTypes, limit: 5, tint: { _, _ in Theme.palette[5] })
+                        RankList(items: s.subagentTypes, limit: 5)
                     }
                     Panel(title: "Sites consultés", subtitle: "Domaines lus par Claude", symbol: "network") {
-                        RankList(items: s.webDomains, limit: 5, tint: { _, _ in Theme.palette[4] })
+                        RankList(items: s.webDomains, limit: 5)
                     }
                 }
             }
@@ -89,7 +88,7 @@ struct ToolsPage: View {
                     .chartLegend(position: .bottom, alignment: .leading)
                     .chartXAxis {
                         AxisMarks(values: .automatic(desiredCount: 6)) { _ in
-                            AxisValueLabel(format: .dateTime.day().month(.abbreviated)).font(.ui(10)).foregroundStyle(Theme.text3)
+                            AxisValueLabel(format: .dateTime.day().month(.abbreviated)).font(.ui(11)).foregroundStyle(Theme.text3)
                         }
                     }
                     .chartYAxisStyle()
@@ -101,10 +100,10 @@ struct ToolsPage: View {
             if !s.skills.isEmpty || !s.mcpServers.isEmpty {
                 HStack(alignment: .top, spacing: 18) {
                     Panel(title: "Skills utilisés", subtitle: "Compétences chargées par Claude", symbol: "sparkles") {
-                        RankList(items: s.skills, limit: 8, tint: { _, _ in Theme.palette[7] })
+                        RankList(items: s.skills, limit: 8)
                     }
                     Panel(title: "Connecteurs & MCP", subtitle: "Serveurs d'outils externes appelés", symbol: "puzzlepiece.extension") {
-                        RankList(items: s.mcpServers, limit: 8, tint: { _, _ in Theme.palette[6] })
+                        RankList(items: s.mcpServers, limit: 8)
                     }
                 }
             }
@@ -114,9 +113,9 @@ struct ToolsPage: View {
     private var tokens: some View {
         let t = s.tokens
         let parts: [(String, Int, Color, String)] = [
-            ("Lecture du cache", t.cacheRead, Theme.palette[2], "Contexte déjà connu, relu à prix réduit"),
-            ("Écriture du cache", t.cacheWrite, Theme.palette[3], "Nouveau contexte mis en cache"),
-            ("Entrée", t.input, Theme.palette[1], "Tokens envoyés sans cache"),
+            ("Lecture du cache", t.cacheRead, Theme.chartNeutral, "Contexte déjà connu, relu à prix réduit"),
+            ("Écriture du cache", t.cacheWrite, Theme.palette[1], "Nouveau contexte mis en cache"),
+            ("Entrée", t.input, Theme.palette[3], "Tokens envoyés sans cache"),
             ("Sortie", t.output, Theme.accent, "Ce que Claude a écrit (texte, code, réflexion)")
         ]
         let total = max(1, t.total)
@@ -129,18 +128,18 @@ struct ToolsPage: View {
                                 .frame(width: max(p.1 > 0 ? 3 : 0, g.size.width * CGFloat(p.1) / CGFloat(total)))
                         }
                     }
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
                 }
-                .frame(height: 18)
+                .frame(height: 10)
                 HStack(alignment: .top, spacing: 18) {
                     ForEach(parts, id: \.0) { p in
                         VStack(alignment: .leading, spacing: 3) {
                             HStack(spacing: 6) {
-                                Circle().fill(p.2).frame(width: 8, height: 8)
-                                Text(p.0).font(.ui(11.5, .medium)).foregroundStyle(Theme.text)
+                                RoundedRectangle(cornerRadius: 2.5, style: .continuous).fill(p.2).frame(width: 8, height: 8)
+                                Text(p.0).font(.ui(12)).foregroundStyle(Theme.text2)
                             }
-                            Text(Fmt.compact(p.1)).font(.serif(20)).foregroundStyle(Theme.text)
-                            Text(p.3).font(.ui(10.5)).foregroundStyle(Theme.text3).fixedSize(horizontal: false, vertical: true)
+                            Text(Fmt.compact(p.1)).font(.display(22)).foregroundStyle(Theme.text).monospacedDigit()
+                            Text(p.3).font(.ui(12)).foregroundStyle(Theme.text3).fixedSize(horizontal: false, vertical: true)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }

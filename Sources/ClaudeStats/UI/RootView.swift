@@ -4,31 +4,23 @@ struct RootView: View {
     @EnvironmentObject var model: AppModel
 
     var body: some View {
-        HStack(spacing: 0) {
-            Sidebar()
-                .frame(width: 252)
-            Rectangle().fill(Theme.border).frame(width: 1)
-            ZStack {
-                Theme.bg
-                switch model.phase {
-                case .loading(let done, let total):
-                    LoadingView(done: done, total: total)
-                        .transition(.opacity)
-                case .ready:
-                    if model.dataset.isEmpty {
-                        EmptyDataView()
-                    } else {
-                        VStack(spacing: 0) {
-                            TopBar()
-                            PageContainer()
-                        }
-                        .transition(.opacity)
-                    }
-                }
+        ZStack(alignment: .topLeading) {
+            WindowGlass()
+            AmbientHalos()
+            HStack(spacing: 0) {
+                Sidebar()
+                    .frame(width: 240)
+                stage
+                    .padding(.vertical, Theme.stageInset)
+                    .padding(.trailing, Theme.stageInset)
+            }
+            if model.showPalette {
+                CommandPalette()
+                    .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
             }
         }
+        .animation(.easeOut(duration: 0.16), value: model.showPalette)
         .ignoresSafeArea()
-        .background(Theme.bg)
         .tint(Theme.accent)
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             // Pick up new sessions when coming back to the app.
@@ -37,7 +29,7 @@ struct RootView: View {
             }
         }
         .onAppear {
-            // Do not start with the search field focused.
+            // Do not start with a text field focused.
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { NSApp.keyWindow?.makeFirstResponder(nil) }
         }
         .sheet(isPresented: $model.showSources) {
@@ -47,6 +39,79 @@ struct RootView: View {
                                                              set: { if !$0 { model.importMessage = nil } })) {
             Button("OK", role: .cancel) {}
         }
+    }
+
+    /// The inset main stage (Arc-style frame), concentric with the window corners.
+    private var stage: some View {
+        let shape = RoundedRectangle(cornerRadius: Theme.radiusStage, style: .continuous)
+        return ZStack {
+            Theme.bg
+            if model.page == .overview, model.phase == .ready {
+                // Hero light: the accent alone, fading into the stage.
+                RadialGradient(colors: [Theme.accentSoft, .clear], center: .topLeading, startRadius: 0, endRadius: 560)
+                    .allowsHitTesting(false)
+            }
+            switch model.phase {
+            case .loading(let done, let total):
+                LoadingView(done: done, total: total)
+                    .transition(.opacity)
+            case .ready:
+                if model.dataset.isEmpty {
+                    EmptyDataView()
+                } else {
+                    VStack(spacing: 0) {
+                        TopBar()
+                        PageContainer()
+                    }
+                    .transition(.opacity)
+                }
+            }
+        }
+        .clipShape(shape)
+        .overlay(shape.strokeBorder(Theme.border))
+        .overlay(TopRim(radius: Theme.radiusStage))
+        .shadow(color: Theme.shadow, radius: 20, y: 8)
+    }
+}
+
+// MARK: - Window material
+
+/// The desktop seen through frosted glass, under the sidebar and around the stage.
+struct WindowGlass: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let v = NSVisualEffectView()
+        v.material = .sidebar
+        v.blendingMode = .behindWindow
+        v.state = .followsWindowActiveState
+        return v
+    }
+
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
+}
+
+/// Two faint blurred lights under the sidebar only, never in the stage.
+struct AmbientHalos: View {
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            Circle()
+                .fill(Theme.accent)
+                .frame(width: 520, height: 520)
+                .blur(radius: 120)
+                .opacity(scheme == .dark ? 0.14 : 0.10)
+                .offset(x: -260, y: -200)
+            Circle()
+                .fill(Color(hex: 0x5A6B85))
+                .frame(width: 520, height: 520)
+                .blur(radius: 120)
+                .opacity(scheme == .dark ? 0.12 : 0.08)
+                .frame(maxHeight: .infinity, alignment: .bottom)
+                .offset(x: -220, y: 260)
+        }
+        .frame(width: 240, alignment: .topLeading)
+        .frame(maxHeight: .infinity, alignment: .topLeading)
+        .allowsHitTesting(false)
     }
 }
 
@@ -62,9 +127,8 @@ struct PageContainer: View {
                     Color.clear.frame(height: 0).id("top")
                     page
                         .frame(maxWidth: 1180)
-                        .padding(.horizontal, 32)
-                        .padding(.top, 8)
-                        .padding(.bottom, 48)
+                        .padding(.horizontal, 28)
+                        .padding(.bottom, 40)
                         .frame(maxWidth: .infinity)
                 }
             }
@@ -98,58 +162,77 @@ struct PageView: View {
 
 // MARK: - Top bar
 
+/// Toolbar of the stage: history, command bar, global filters.
 struct TopBar: View {
     @EnvironmentObject var model: AppModel
 
     var body: some View {
-        HStack(spacing: 10) {
-            Text(model.page.title)
-                .font(.ui(14, .medium))
-                .foregroundStyle(Theme.text)
+        HStack(spacing: 4) {
+            Button { model.goBack() } label: { Image(systemName: "chevron.left") }
+                .buttonStyle(IconButtonStyle())
+                .disabled(model.backStack.isEmpty)
+                .opacity(model.backStack.isEmpty ? 0.4 : 1)
+                .help("Page précédente (⌘[)")
+                .accessibilityLabel("Page précédente")
+            Button { model.goForward() } label: { Image(systemName: "chevron.right") }
+                .buttonStyle(IconButtonStyle())
+                .disabled(model.forwardStack.isEmpty)
+                .opacity(model.forwardStack.isEmpty ? 0.4 : 1)
+                .help("Page suivante (⌘])")
+                .accessibilityLabel("Page suivante")
             if let p = model.filter.project {
-                HStack(spacing: 5) {
-                    Image(systemName: "folder.fill").font(.ui(10))
-                    Text(p).font(.ui(11.5, .medium))
+                HStack(spacing: 6) {
+                    Image(systemName: "folder.fill").font(.ui(10)).foregroundStyle(Theme.accent)
+                    Text(p).font(.ui(12, .medium)).foregroundStyle(Theme.text)
                     Button {
                         model.filter.project = nil
                     } label: {
-                        Image(systemName: "xmark").font(.ui(9, .bold))
+                        Image(systemName: "xmark").font(.ui(9, .bold)).foregroundStyle(Theme.text3)
                     }
                     .buttonStyle(.plain)
                     .help("Retirer le filtre projet")
                     .accessibilityLabel("Retirer le filtre projet")
                 }
-                .foregroundStyle(Theme.accent)
                 .padding(.horizontal, 9)
-                .padding(.vertical, 4)
-                .background(Capsule().fill(Theme.accent.opacity(0.14)))
+                .frame(height: 24)
+                .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Theme.fill2))
+                .padding(.leading, 6)
             }
-            Spacer()
+            Spacer(minLength: 12)
+            commandBar
+            Spacer(minLength: 12)
             sourceMenu
             PillPicker(options: Period.allCases, selection: $model.filter.period, label: { $0.label })
-            Button {
-                model.load(force: false)
-            } label: {
-                Group {
-                    if model.isRefreshing {
-                        ProgressView().controlSize(.small).scaleEffect(0.7)
-                    } else {
-                        Image(systemName: "arrow.clockwise").font(.ui(12, .medium))
-                    }
-                }
-                .frame(width: 28, height: 28)
-                .foregroundStyle(Theme.text2)
-                .background(RoundedRectangle(cornerRadius: 8).fill(Theme.card))
-                .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Theme.border))
-            }
-            .buttonStyle(.plain)
-            .help("Relire les sessions (⌘R)")
-            .accessibilityLabel("Rafraîchir")
+                .padding(.leading, 4)
         }
-        .padding(.leading, 32)
-        .padding(.trailing, 20)
+        .padding(.horizontal, 14)
         .frame(height: 52)
-        .background(Theme.bg)
+        .background(Color.clear.contentShape(Rectangle()).gesture(WindowDragGesture()))
+    }
+
+    private var commandBar: some View {
+        Button { model.showPalette = true } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass").font(.ui(12))
+                Text("Rechercher une session, une page…").font(.ui(13)).lineLimit(1)
+                Spacer(minLength: 4)
+                Text("⌘K")
+                    .font(.ui(11, .medium))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 1)
+                    .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Theme.fill2))
+            }
+            .foregroundStyle(Theme.text3)
+            .padding(.leading, 12)
+            .padding(.trailing, 6)
+            .frame(minWidth: 180, maxWidth: 320)
+            .frame(height: 30)
+            .background(Capsule().fill(Theme.fill1))
+            .overlay(Capsule().strokeBorder(Theme.border))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .help("Rechercher (⌘K)")
     }
 
     private var sourceMenu: some View {
@@ -177,17 +260,20 @@ struct TopBar: View {
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: "line.3.horizontal.decrease").font(.ui(11, .medium))
-                Text(label).font(.ui(11.5))
+                Text(label).font(.ui(12, .medium))
+                Image(systemName: "chevron.down").font(.ui(8, .bold)).foregroundStyle(Theme.text3)
             }
             .foregroundStyle(Theme.text2)
         }
-        .menuStyle(.borderlessButton)
+        .menuStyle(.button)
+        .buttonStyle(.plain)
         .menuIndicator(.hidden)
         .fixedSize()
         .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(RoundedRectangle(cornerRadius: 8).fill(Theme.card))
-        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Theme.border))
+        .frame(height: 28)
+        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.fill2))
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Theme.border))
+        .overlay(TopRim(radius: 8))
     }
 }
 
@@ -205,7 +291,7 @@ struct LoadingView: View {
                 ClaudeSpark(size: 54, animate: true)
                 VStack(spacing: 8) {
                     Text("Je lis tes sessions avec Claude…")
-                        .font(.serif(26))
+                        .font(.display(24))
                         .foregroundStyle(Theme.text)
                     Text(total > 0 ? "\(Fmt.int(done)) fichiers sur \(Fmt.int(total))" : "Recherche des transcripts sur ton Mac")
                         .font(.ui(12.5))
@@ -238,7 +324,7 @@ struct EmptyDataView: View {
         VStack(spacing: 16) {
             PixelMascot(pixel: 7)
             Text("Aucune session trouvée")
-                .font(.serif(26))
+                .font(.display(26))
                 .foregroundStyle(Theme.text)
             Text("ClaudeStats lit les transcripts de Claude Code dans ~/.claude/projects et ceux de Cowork.\nTu peux aussi importer l'export de tes conversations claude.ai.")
                 .font(.ui(13))

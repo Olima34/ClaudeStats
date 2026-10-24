@@ -48,17 +48,19 @@ struct CategoriesPage: View {
                 }
                 .frame(maxWidth: .infinity)
                 if let top = s.categories.max(by: { value($0) < value($1) }) {
-                    Card(padding: 22) {
+                    Card(padding: 22, featured: true) {
                         VStack(alignment: .leading, spacing: 10) {
-                            Text("Ta catégorie n°1").font(.ui(11.5)).foregroundStyle(Theme.text3)
+                            Label("Ta catégorie n°1", systemImage: "star").font(.ui(12)).foregroundStyle(Theme.text2)
                             Image(systemName: top.category.symbol)
-                                .font(.system(size: 30))
-                                .foregroundStyle(Theme.color(top.category))
-                            Text(top.category.label).font(.serif(26)).foregroundStyle(Theme.text)
+                                .font(.system(size: 22))
+                                .foregroundStyle(Theme.accent)
+                                .frame(width: 44, height: 44)
+                                .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.accentSoft))
+                            Text(top.category.label).font(.display(24)).foregroundStyle(Theme.text)
                             Text(top.category.blurb).font(.ui(12.5)).foregroundStyle(Theme.text2)
                             Spacer(minLength: 6)
                             Text("\(Fmt.pct(value(top) / max(1, s.categories.reduce(0) { $0 + value($1) }))) de ton \(metric == .time ? "temps" : (metric == .prompts ? "nombre de messages" : "nombre de sessions"))")
-                                .font(.ui(12, .medium)).foregroundStyle(Theme.color(top.category))
+                                .font(.ui(12, .medium)).foregroundStyle(Theme.text2)
                         }
                     }
                     .frame(width: 300)
@@ -72,10 +74,10 @@ struct CategoriesPage: View {
                         .cornerRadius(2)
                 }
                 .chartForegroundStyleScale(domain: present.map(\.label), range: present.map { Theme.color($0) })
-                .chartLegend(position: .bottom, alignment: .leading, spacing: 10)
+                .chartLegend(position: .bottom, alignment: .leading, spacing: 12)
                 .chartXAxis {
                     AxisMarks(values: .automatic(desiredCount: 8)) { _ in
-                        AxisValueLabel(format: .dateTime.day().month(.abbreviated)).font(.ui(10)).foregroundStyle(Theme.text3)
+                        AxisValueLabel(format: .dateTime.day().month(.abbreviated)).font(.ui(11)).foregroundStyle(Theme.text3)
                     }
                 }
                 .chartYAxisStyle()
@@ -103,16 +105,19 @@ struct CategoryCard: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 10) {
                     Image(systemName: stat.category.symbol)
-                        .font(.ui(14, .medium))
-                        .foregroundStyle(color)
-                        .frame(width: 32, height: 32)
-                        .background(RoundedRectangle(cornerRadius: 9).fill(color.opacity(0.14)))
+                        .font(.ui(14))
+                        .foregroundStyle(Theme.text2)
+                        .frame(width: 36, height: 36)
+                        .background(RoundedRectangle(cornerRadius: Theme.radiusInner, style: .continuous).fill(Theme.fill2))
+                        .overlay(alignment: .bottomTrailing) {
+                            Circle().fill(color).frame(width: 8, height: 8).offset(x: 2, y: 2)
+                        }
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(stat.category.label).font(.ui(14, .semibold)).foregroundStyle(Theme.text)
+                        Text(stat.category.label).font(.ui(13, .semibold)).foregroundStyle(Theme.text)
                         Text(stat.category.blurb).font(.ui(11)).foregroundStyle(Theme.text3).lineLimit(1)
                     }
                     Spacer()
-                    Text(Fmt.pct(share)).font(.serif(20)).foregroundStyle(color)
+                    Text(Fmt.pct(share)).font(.display(20)).foregroundStyle(Theme.text).monospacedDigit()
                 }
                 HStack(spacing: 0) {
                     MiniStat(value: Fmt.hours(stat.seconds), label: "temps")
@@ -133,7 +138,7 @@ struct CategoryCard: View {
                     VStack(alignment: .leading, spacing: 4) {
                         ForEach(stat.examples.prefix(3), id: \.self) { t in
                             HStack(alignment: .top, spacing: 6) {
-                                Text("•").foregroundStyle(color)
+                                Text("•").foregroundStyle(Theme.text3)
                                 Text(t).foregroundStyle(Theme.text2).lineLimit(1)
                             }
                             .font(.ui(11.5))

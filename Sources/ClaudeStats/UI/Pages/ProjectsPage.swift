@@ -36,22 +36,22 @@ struct ProjectsPage: View {
                 StatTile(symbol: "folder", value: Fmt.int(s.projects.count), label: "Projets actifs")
                 StatTile(symbol: "star", value: s.projects.first?.name ?? "–", label: "Projet n°1",
                          detail: s.projects.first.map { "\(Fmt.pct($0.seconds / max(1, s.activeSeconds))) de ton temps" })
-                StatTile(symbol: "chart.pie", value: Fmt.pct(top3Share), label: "Part des 3 premiers", tint: Theme.palette[1])
+                StatTile(symbol: "chart.pie", value: Fmt.pct(top3Share), label: "Part des 3 premiers")
                 StatTile(symbol: "clock.arrow.circlepath", value: s.projects.max(by: { $0.last < $1.last })?.name ?? "–",
-                         label: "Dernier projet ouvert", tint: Theme.palette[2])
+                         label: "Dernier projet ouvert")
             }
-            Panel(title: "Temps par projet", subtitle: "Les 12 projets où tu passes le plus de temps, colorés par catégorie dominante", symbol: "chart.bar.xaxis") {
+            Panel(title: "Temps par projet", subtitle: "Les 12 projets où tu passes le plus de temps", symbol: "chart.bar.xaxis") {
                 let top = Array(s.projects.prefix(12))
                 Chart(top) { p in
-                    BarMark(x: .value("Heures", p.seconds / 3600), y: .value("Projet", p.name))
-                        .foregroundStyle(Theme.color(p.mainCategory))
-                        .cornerRadius(4)
+                    BarMark(x: .value("Heures", p.seconds / 3600), y: .value("Projet", p.name), height: .ratio(0.55))
+                        .foregroundStyle(p.name == top.first?.name ? Theme.accent : Theme.chartNeutral)
+                        .cornerRadius(3)
                         .annotation(position: .trailing) {
-                            Text(Fmt.hours(p.seconds)).font(.ui(10.5)).foregroundStyle(Theme.text2)
+                            Text(Fmt.hours(p.seconds)).font(.ui(11)).foregroundStyle(Theme.text2).monospacedDigit()
                         }
                 }
                 .chartYAxis {
-                    AxisMarks { _ in AxisValueLabel().font(.ui(11.5)).foregroundStyle(Theme.text) }
+                    AxisMarks { _ in AxisValueLabel().font(.ui(12)).foregroundStyle(Theme.text) }
                 }
                 .chartXAxis(.hidden)
                 .frame(height: CGFloat(max(3, top.count)) * 30)
@@ -93,11 +93,11 @@ struct ProjectCard: View {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(project.name)
-                            .font(.serif(19))
+                            .font(.display(16))
                             .foregroundStyle(Theme.text)
                             .lineLimit(1)
                         Text(displayPath)
-                            .font(.ui(10.5))
+                            .font(.ui(11))
                             .foregroundStyle(Theme.text3)
                             .lineLimit(1)
                             .truncationMode(.head)
@@ -116,11 +116,11 @@ struct ProjectCard: View {
                 }
                 Group {
                     if series.count > 1 {
-                        Sparkline(values: series, color: Theme.color(project.mainCategory))
+                        Sparkline(values: series)
                     } else {
                         VStack {
                             Spacer()
-                            Rectangle().fill(Theme.color(project.mainCategory).opacity(0.5)).frame(height: 1.5)
+                            Rectangle().fill(Theme.chartNeutral).frame(height: 1.5)
                         }
                     }
                 }
@@ -132,13 +132,13 @@ struct ProjectCard: View {
                     if project.linesAdded > 0 { Text("+\(Fmt.compact(project.linesAdded)) lignes") }
                     Text(Fmt.money(project.cost))
                 }
-                .font(.ui(10.5))
+                .font(.ui(11))
                 .foregroundStyle(Theme.text3)
+                .monospacedDigit()
             }
         }
-        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(hovering ? Theme.accent.opacity(0.5) : .clear, lineWidth: 1))
-        .scaleEffect(hovering ? 1.01 : 1)
-        .animation(.easeOut(duration: 0.15), value: hovering)
+        .overlay(RoundedRectangle(cornerRadius: Theme.radiusCard, style: .continuous).strokeBorder(hovering ? Theme.borderStrong : .clear, lineWidth: 1))
+        .animation(.easeOut(duration: 0.16), value: hovering)
         .onHover { hovering = $0 }
         .contentShape(Rectangle())
         .contextMenu {

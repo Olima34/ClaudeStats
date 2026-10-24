@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1600">
+<title>ClaudeStats Graphite</title>
+<style>
+/* ===== Tokens : copie conforme de design_system_macos27.md, section 3 ===== */
+:root {
+  color-scheme: dark;
+  --accent-h: 15; --accent-s: 62%; --accent-l: 60%;
+  --accent:        hsl(var(--accent-h) var(--accent-s) var(--accent-l));
+  --accent-strong: hsl(var(--accent-h) var(--accent-s) calc(var(--accent-l) - 8%));
+  --accent-soft:   hsl(var(--accent-h) var(--accent-s) var(--accent-l) / 0.14);
+  --accent-rim:    hsl(var(--accent-h) var(--accent-s) var(--accent-l) / 0.55);
+  --on-accent: #FFFFFF;
+
+  --bg-root:        #0B0C0E;
+  --glass-sidebar:  rgba(28, 29, 33, 0.55);
+  --glass-toolbar:  rgba(18, 18, 21, 0.72);
+  --bg-stage:       rgba(18, 18, 21, 0.94);
+  --surface-card:       linear-gradient(180deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0.025) 100%);
+  --surface-floating:   rgba(32, 32, 37, 0.78);
+  --fill-1: rgba(255,255,255,0.05);
+  --fill-2: rgba(255,255,255,0.08);
+  --fill-3: rgba(255,255,255,0.11);
+  --border-subtle: rgba(255,255,255,0.07);
+  --border-strong: rgba(255,255,255,0.12);
+  --rim: rgba(255,255,255,0.10);
+  --specular-top: inset 0 1px 0 0 var(--rim);
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.25), 0 8px 24px -12px rgba(0,0,0,0.5);
+  --text-primary:   rgba(255,255,255,0.94);
+  --text-secondary: rgba(255,255,255,0.62);
+  --text-tertiary:  rgba(255,255,255,0.40);
+  --positive: #4CB782; --warning: #E0A443; --negative: #E5675C;
+  --chart-neutral: rgba(255,255,255,0.26);
+  --chart-track:   rgba(255,255,255,0.06);
+  --chart-grid:    rgba(255,255,255,0.06);
+  --cat-1: var(--accent); --cat-2: #7F95B2; --cat-3: #8FA58A;
+  --cat-4: #C2AE8C; --cat-5: #A190B8; --cat-6: #6F7A86;
+  --cat-other: rgba(255,255,255,0.20);
+  --radius-window: 22px; --stage-inset: 8px; --radius-stage: 14px;
+  --radius-card: 12px; --radius-inner: 8px; --radius-pill: 9999px;
+  --space-page: 28px; --gap-grid: 14px;
+
+  /* Maquette uniquement : fond d'écran du bureau */
+  --wallpaper:
+    radial-gradient(60% 70% at 12% 85%, rgba(150, 92, 70, 0.55), transparent 70%),
+    radial-gradient(55% 60% at 85% 10%, rgba(70, 92, 128, 0.60), transparent 70%),
+    radial-gradient(50% 50% at 55% 55%, rgba(40, 52, 70, 0.7), transparent 75%),
+    linear-gradient(160deg, #15181E 0%, #0C0D10 100%);
+  --halo-1-opacity: 0.14; --halo-2-opacity: 0.12;
+  --win-shadow: 0 50px 120px -20px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.09);
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --accent-l: 52%;
+  --bg-root:        #E6E7EA;
+  --glass-sidebar:  rgba(240, 240, 243, 0.62);
+  --glass-toolbar:  rgba(246, 246, 248, 0.78);
+  --bg-stage:       rgba(246, 246, 248, 0.94);
+  --surface-card:       #FFFFFF;
+  --surface-floating:   rgba(255, 255, 255, 0.80);
+  --fill-1: rgba(0,0,0,0.04);
+  --fill-2: rgba(0,0,0,0.06);
+  --fill-3: rgba(0,0,0,0.08);
+  --border-subtle: rgba(0,0,0,0.07);
+  --border-strong: rgba(0,0,0,0.12);
+  --rim: rgba(255,255,255,0.9);
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.04), 0 6px 20px -10px rgba(0,0,0,0.12);
+  --text-primary:   rgba(0,0,0,0.88);
+  --text-secondary: rgba(0,0,0,0.58);
+  --text-tertiary:  rgba(0,0,0,0.38);
+  --chart-neutral: rgba(0,0,0,0.22);
+  --chart-track:   rgba(0,0,0,0.05);
+  --chart-grid:    rgba(0,0,0,0.06);
+  --cat-2: #5E7697; --cat-3: #6E8A68; --cat-4: #A8925F; --cat-5: #8371A0; --cat-6: #56606B;
+  --cat-other: rgba(0,0,0,0.18);
+
+  --wallpaper:
+    radial-gradient(60% 70% at 12% 85%, rgba(226, 170, 145, 0.75), transparent 70%),
+    radial-gradient(55% 60% at 85% 10%, rgba(160, 182, 214, 0.85), transparent 70%),
+    linear-gradient(160deg, #E9EBEF 0%, #D6D9DF 100%);
+  --halo-1-opacity: 0.10; --halo-2-opacity: 0.08;
+  --win-shadow: 0 40px 100px -20px rgba(0,0,0,0.35), 0 0 0 1px rgba(0,0,0,0.12);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1600px; height: 1000px; overflow: hidden; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  font-size: 13px; line-height: 1.45; color: var(--text-primary);
+  background: var(--wallpaper);
+}
+.num { font-variant-numeric: tabular-nums; }
+svg.i { display: block; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ===== Fenêtre ===== */
+.win {
+  position: absolute; left: 40px; top: 40px; width: 1520px; height: 920px;
+  border-radius: var(--radius-window); overflow: hidden; display: flex;
+  background: var(--glass-sidebar);
+  -webkit-backdrop-filter: blur(60px) saturate(140%); backdrop-filter: blur(60px) saturate(140%);
+  box-shadow: var(--win-shadow);
+}
+.win::before { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 1px 0 rgba(255,255,255,0.12); pointer-events: none; z-index: 5; }
+.halo { position: absolute; width: 520px; height: 520px; border-radius: 50%; filter: blur(120px); pointer-events: none; z-index: 0; }
+.halo.h1 { left: -260px; top: -200px; background: var(--accent); opacity: var(--halo-1-opacity); }
+.halo.h2 { left: -220px; bottom: -260px; background: #5A6B85; opacity: var(--halo-2-opacity); }
+
+/* ===== Sidebar ===== */
+.sidebar { position: relative; z-index: 1; width: 240px; flex: none; display: flex; flex-direction: column; padding: 0 10px; }
+.lights { display: flex; gap: 8px; padding: 18px 8px 0; height: 48px; }
+.lights span { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 0.5px rgba(0,0,0,0.2); }
+.brand { display: flex; align-items: center; gap: 9px; padding: 6px 8px 8px; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.brand .spark { color: var(--accent); }
+.group { font-size: 11px; font-weight: 600; color: var(--text-tertiary); padding: 14px 10px 4px; }
+.nav { display: flex; align-items: center; gap: 10px; height: 30px; padding: 0 10px; border-radius: 8px; color: var(--text-secondary); font-size: 13px; }
+.nav .meta { margin-left: auto; font-size: 11.5px; color: var(--text-tertiary); }
+.nav.active { background: var(--fill-3); box-shadow: var(--specular-top); color: var(--text-primary); font-weight: 500; }
+.nav.active svg { color: var(--accent); }
+.status {
+  margin: auto 0 10px; padding: 10px 12px; border-radius: 12px; display: flex; align-items: center; gap: 10px;
+  background: var(--surface-floating); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px);
+  box-shadow: 0 0 0 1px var(--border-subtle), var(--specular-top), 0 8px 24px rgba(0,0,0,0.25);
+}
+.status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--positive); box-shadow: 0 0 0 3px color-mix(in srgb, var(--positive) 22%, transparent); flex: none; margin: 0 2px; }
+.status b { display: block; font-size: 12px; font-weight: 600; }
+.status small { display: block; font-size: 11px; color: var(--text-tertiary); }
+.iconbtn { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; color: var(--text-secondary); flex: none; }
+.iconbtn.glass { background: var(--fill-2); box-shadow: var(--specular-top), 0 0 0 1px var(--border-subtle); }
+
+/* ===== Scène ===== */
+.stage {
+  position: relative; z-index: 2; flex: 1; margin: 8px 8px 8px 0; border-radius: var(--radius-stage);
+  background: var(--bg-stage); overflow: hidden; display: flex; flex-direction: column;
+  box-shadow: 0 0 0 1px var(--border-subtle), var(--specular-top), 0 12px 40px rgba(0,0,0,0.35);
+}
+.toolbar { height: 52px; flex: none; display: flex; align-items: center; gap: 6px; padding: 0 16px; background: var(--glass-toolbar); }
+.search {
+  position: absolute; left: 50%; transform: translateX(-50%); width: 320px; height: 30px; border-radius: 9999px;
+  background: var(--fill-1); box-shadow: inset 0 0 0 1px var(--border-subtle); display: flex; align-items: center; gap: 8px; padding: 0 6px 0 12px;
+  color: var(--text-tertiary); font-size: 13px;
+}
+.kbd { margin-left: auto; font-size: 11px; font-weight: 500; color: var(--text-tertiary); background: var(--fill-2); border-radius: 5px; padding: 1px 6px; }
+.tb-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.seg { display: inline-flex; padding: 2px; border-radius: 8px; background: var(--fill-1); box-shadow: inset 0 0 0 1px var(--border-subtle); }
+.seg span { height: 24px; padding: 0 10px; display: flex; align-items: center; font-size: 12px; font-weight: 500; color: var(--text-secondary); border-radius: 6px; }
+.seg span.on { background: var(--fill-3); color: var(--text-primary); box-shadow: var(--specular-top), 0 1px 2px rgba(0,0,0,0.25); }
+[data-theme="light"] .seg span.on { background: #FFFFFF; box-shadow: 0 1px 2px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(0,0,0,0.06); }
+.btn { height: 28px; padding: 0 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 500; white-space: nowrap; }
+.btn.glass { background: var(--fill-2); color: var(--text-primary); box-shadow: var(--specular-top), 0 0 0 1px var(--border-subtle); }
+.btn.primary { background: var(--accent); color: var(--on-accent); box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 1px 2px rgba(0,0,0,0.3); }
+.btn.glass svg { color: var(--text-secondary); }
+.content { flex: 1; overflow: hidden; padding: 0 var(--space-page) 28px; }
+
+/* ===== En-têtes ===== */
+.head { display: flex; align-items: flex-end; gap: 16px; padding: 20px 0 20px; }
+.head h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.022em; line-height: 1.15; }
+.head p { color: var(--text-secondary); margin-top: 4px; max-width: 720px; }
+.head .actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.eyebrow { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-tertiary); }
+.hero {
+  margin: 0 calc(-1 * var(--space-page)); padding: 26px var(--space-page) 26px; display: flex; align-items: flex-end; gap: 16px;
+  background: radial-gradient(120% 140% at 0% 0%, var(--accent-soft) 0%, transparent 55%);
+}
+.hero h1 { font-size: 34px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.1; margin-top: 6px; }
+.hero p { color: var(--text-secondary); margin-top: 6px; font-size: 13.5px; }
+.hero .actions { margin-left: auto; display: flex; gap: 8px; }
+
+/* ===== Grille & cartes ===== */
+.grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--gap-grid); margin-bottom: var(--gap-grid); }
+.s3 { grid-column: span 3; } .s4 { grid-column: span 4; } .s5 { grid-column: span 5; } .s6 { grid-column: span 6; }
+.s7 { grid-column: span 7; } .s8 { grid-column: span 8; } .s12 { grid-column: span 12; }
+.card { background: var(--surface-card); border-radius: var(--radius-card); padding: 16px 18px; box-shadow: 0 0 0 1px var(--border-subtle), var(--specular-top), var(--shadow-card); position: relative; }
+.card.featured { background: radial-gradient(80% 120% at 0% 0%, var(--accent-soft), transparent 60%), var(--surface-card); box-shadow: 0 0 0 1px var(--border-subtle), inset 0 1px 0 0 var(--accent-rim), var(--shadow-card); }
+.ch { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 14px; }
+.ch svg { color: var(--text-tertiary); margin-top: 2px; }
+.ch h3 { font-size: 13px; font-weight: 600; letter-spacing: -0.005em; }
+.ch small { display: block; font-size: 12px; color: var(--text-tertiary); }
+.ch .right { margin-left: auto; }
+
+/* KPI */
+.kpi { padding: 14px 16px 14px; }
+.kpi .lbl { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--text-secondary); }
+.kpi .lbl svg { color: var(--text-tertiary); }
+.kpi .val { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin-top: 8px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.kpi .val .u { font-size: 17px; color: var(--text-secondary); font-weight: 500; margin-left: 2px; }
+.kpi .val.txt { font-size: 19px; letter-spacing: -0.015em; margin-top: 10px; }
+.kpi .ctx { font-size: 12px; color: var(--text-tertiary); margin-top: 6px; display: flex; gap: 6px; align-items: center; }
+.kpi .spark { position: absolute; right: 16px; top: 40px; }
+.up { color: var(--positive); font-weight: 500; }
+
+/* Légendes, classements */
+.legend { display: grid; gap: 8px; font-size: 12.5px; }
+.legend .row { display: grid; grid-template-columns: 8px 1fr auto 34px; gap: 9px; align-items: center; white-space: nowrap; }
+.legend .sw { width: 8px; height: 8px; border-radius: 2.5px; }
+.legend .v { color: var(--text-secondary); text-align: right; font-variant-numeric: tabular-nums; }
+.legend .p { color: var(--text-tertiary); text-align: right; font-variant-numeric: tabular-nums; }
+.rank { display: grid; gap: 9px; }
+.rank .r { display: grid; grid-template-columns: 18px 1fr auto; column-gap: 8px; row-gap: 5px; align-items: center; font-size: 12.5px; }
+.rank .n { color: var(--text-tertiary); font-size: 11px; font-variant-numeric: tabular-nums; }
+.rank .v { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.rank .bar { grid-column: 2 / 4; height: 4px; border-radius: 2px; background: var(--chart-track); overflow: hidden; }
+.rank .bar i { display: block; height: 100%; border-radius: 2px; background: var(--chart-neutral); }
+.rank .r.top .bar i { background: var(--accent); }
+.axis { font-size: 11px; fill: var(--text-tertiary); font-variant-numeric: tabular-nums; font-family: -apple-system, system-ui; }
+.tag { display: inline-flex; align-items: center; gap: 6px; height: 20px; padding: 0 7px; border-radius: 6px; background: var(--fill-2); font-size: 11px; font-weight: 500; color: var(--text-secondary); white-space: nowrap; }
+.tag .d { width: 6px; height: 6px; border-radius: 50%; }
+.note { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 10px; background: var(--fill-1); box-shadow: inset 0 0 0 1px var(--border-subtle); font-size: 12.5px; color: var(--text-secondary); }
+.note b { color: var(--text-primary); font-weight: 600; display: block; margin-bottom: 2px; }
+.note .ib { width: 28px; height: 28px; border-radius: 8px; background: var(--fill-2); display: grid; place-items: center; color: var(--text-secondary); flex: none; }
+
+/* Tableau sessions */
+.table { font-size: 12.5px; }
+.table .th, .table .tr { display: grid; grid-template-columns: 1fr 150px 92px 64px 44px 60px 58px; gap: 12px; align-items: center; padding: 0 12px; }
+.table .th { height: 30px; font-size: 11px; font-weight: 600; color: var(--text-tertiary); border-bottom: 1px solid var(--border-subtle); }
+.table .tr { height: 46px; border-bottom: 1px solid var(--border-subtle); }
+.table .tr b { font-weight: 500; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.table .tr small { display: block; font-size: 11.5px; color: var(--text-tertiary); }
+.table .tr.sel { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); border-radius: 6px; }
+.table .r { text-align: right; font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.mini { height: 4px; border-radius: 2px; background: var(--chart-track); overflow: hidden; } .mini i { display: block; height: 100%; background: var(--chart-neutral); }
+
+/* Palette ⌘K */
+.veil { position: absolute; inset: 0; z-index: 10; background: rgba(0,0,0,0.32); border-radius: var(--radius-window); }
+.palette {
+  position: absolute; z-index: 11; left: 50%; top: 118px; width: 640px; transform: translateX(-50%) translateX(120px);
+  border-radius: 14px; background: rgba(34, 34, 39, 0.94); -webkit-backdrop-filter: blur(40px) saturate(160%); backdrop-filter: blur(40px) saturate(160%);
+  box-shadow: 0 24px 64px -12px rgba(0,0,0,0.55), 0 0 0 1px var(--border-strong), var(--specular-top); overflow: hidden;
+}
+.palette .in { height: 50px; display: flex; align-items: center; gap: 10px; padding: 0 16px; font-size: 16px; border-bottom: 1px solid var(--border-subtle); }
+.palette .in svg { color: var(--text-tertiary); }
+.palette .caret { display: inline-block; width: 1.5px; height: 19px; background: var(--accent); vertical-align: -3px; margin-left: 1px; }
+.palette .grp { padding: 10px 16px 4px; }
+.palette .it { display: flex; align-items: center; gap: 10px; height: 38px; margin: 0 6px; padding: 0 10px; border-radius: 8px; font-size: 13px; }
+.palette .it.on { background: var(--fill-2); box-shadow: var(--specular-top); }
+.palette .it .ib { width: 24px; height: 24px; border-radius: 6px; background: var(--fill-2); display: grid; place-items: center; color: var(--text-secondary); }
+.palette .it small { color: var(--text-tertiary); font-size: 12px; }
+.palette .it .k { margin-left: auto; display: flex; gap: 4px; }
+.palette mark { background: none; color: var(--text-primary); font-weight: 600; text-decoration: underline; text-decoration-color: var(--accent-rim); text-underline-offset: 3px; }
+.palette .foot { display: flex; gap: 16px; padding: 10px 16px; margin-top: 6px; border-top: 1px solid var(--border-subtle); font-size: 11.5px; color: var(--text-tertiary); }
+.palette .foot span { display: flex; gap: 6px; align-items: center; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+/* ---------- Utilitaires ---------- */
+const P = {
+  grid: '<rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/>',
+  clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+  folder: '<path d="M3.5 7.5a2 2 0 0 1 2-2h3.8l2 2h7.2a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/>',
+  cats: '<circle cx="7.5" cy="7.5" r="3.2"/><circle cx="16.5" cy="7.5" r="3.2"/><circle cx="7.5" cy="16.5" r="3.2"/><circle cx="16.5" cy="16.5" r="3.2"/>',
+  chat: '<path d="M20.5 11.5a8 8 0 0 1-11.7 7.1L4 19.8l1.2-4.3a8 8 0 1 1 15.3-4z"/>',
+  wrench: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.4-3.4a6 6 0 0 1-7.9 7.9l-6.6 6.6a2.1 2.1 0 0 1-3-3l6.6-6.6a6 6 0 0 1 7.9-7.9z"/>',
+  quote: '<path d="M6 17c2-1 3-3 3-6V7H5v4h3M15 17c2-1 3-3 3-6V7h-4v4h3"/>',
+  gauge: '<path d="M4 16.5a8 8 0 1 1 16 0"/><path d="m12 16 3.5-4.5"/>',
+  badge: '<circle cx="12" cy="9" r="5.5"/><path d="M8.8 13.6 7.5 21l4.5-2.6 4.5 2.6-1.3-7.4"/>',
+  sparkles: '<path d="M11 3.5 12.6 8l4.4 1.6-4.4 1.6L11 15.7l-1.6-4.5L5 9.6 9.4 8z"/><path d="m18 14 .8 2.2 2.2.8-2.2.8L18 20l-.8-2.2-2.2-.8 2.2-.8z"/>',
+  bulb: '<path d="M9.5 18h5M10.5 21h3M12 3a6 6 0 0 0-3.5 10.9V15.5h7v-1.6A6 6 0 0 0 12 3z"/>',
+  search: '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.3-4.3"/>',
+  chevL: '<path d="m14.5 18-6-6 6-6"/>', chevR: '<path d="m9.5 18 6-6-6-6"/>', chevD: '<path d="m6 9 6 6 6-6"/>',
+  refresh: '<path d="M20 12a8 8 0 1 1-2.3-5.7L20 8.5"/><path d="M20 4v4.5h-4.5"/>',
+  filter: '<path d="M4 7h16M7 12h10M10 17h4"/>',
+  cal: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+  send: '<path d="M21 3 14 21l-3.5-7.5L3 10z"/><path d="M21 3 10.5 13.5"/>',
+  flame: '<path d="M12 21c3.9 0 6.5-2.7 6.5-6.4 0-4.6-4.3-6.4-4.8-11.1-2.7 1.8-4.4 4.6-4.4 7.4-1-.8-1.7-1.9-1.9-3.4C5.6 9.4 5.5 12 5.5 14.6 5.5 18.3 8.1 21 12 21z"/>',
+  code: '<path d="m15.5 17.5 5.5-5.5-5.5-5.5M8.5 6.5 3 12l5.5 5.5"/>',
+  dollar: '<path d="M12 3v18M16.5 7H10a3 3 0 0 0 0 6h4a3 3 0 0 1 0 6H7"/>',
+  file: '<path d="M13.5 3.5H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9z"/><path d="M13.5 3.5V9H19"/>',
+  term: '<rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="m7 9.5 3 2.5-3 2.5M12.5 15h4.5"/>',
+  globe: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.4 3.5 5.3 3.5 8.5s-1.1 6.1-3.5 8.5c-2.4-2.4-3.5-5.3-3.5-8.5s1.1-6.1 3.5-8.5z"/>',
+  users: '<circle cx="9" cy="8.5" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M15.5 5.2a3.5 3.5 0 0 1 0 6.6M21.5 20a6.5 6.5 0 0 0-3.8-5.9"/>',
+  trophy: '<path d="M8 20.5h8M12 16v4.5M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5.5h2.5V7A3 3 0 0 1 17 10M7 5.5H4.5V7A3 3 0 0 0 7 10"/>',
+  sun: '<circle cx="12" cy="12" r="3.8"/><path d="M12 2.5v2M12 19.5v2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M2.5 12h2M19.5 12h2M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>',
+  star: '<path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/>',
+  layers: '<path d="m12 3.5 8.5 4.5-8.5 4.5L3.5 8z"/><path d="m3.5 12.5 8.5 4.5 8.5-4.5"/>',
+  bars: '<path d="M5.5 19.5v-8M12 19.5V4.5M18.5 19.5v-11"/>',
+  pie: '<path d="M11 3.5a8.5 8.5 0 1 0 9.5 9.5H11z"/><path d="M14 3.6a8.6 8.6 0 0 1 6.4 6.4H14z"/>',
+  token: '<rect x="3.5" y="6" width="17" height="12" rx="2.5"/><path d="M7.5 10h3M7.5 14h6M15.5 10h1"/>',
+  bolt: '<path d="M13 3 5 13.5h6l-1 7.5 8-10.5h-6z"/>',
+  export: '<path d="M12 15V3.5M7.5 8 12 3.5 16.5 8M5 14v4.5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V14"/>',
+  more: '<circle cx="5.5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18.5" cy="12" r="1"/>',
+  brain: '<path d="M9 4.5a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 2 4.5 3 3 0 0 0 6 .5v-10a3 3 0 0 0-3-3zM15 4.5a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3 3 0 0 1-2 4.5 3 3 0 0 1-6 .5"/>',
+  return: '<path d="M19 5v7a2 2 0 0 1-2 2H6M9.5 10.5 6 14l3.5 3.5"/>',
+};
+const I = (n, s = 16, sw) => `<svg class="i" width="${s}" height="${s}" viewBox="0 0 24 24"${sw ? ` style="stroke-width:${sw}"` : ''}>${P[n]}</svg>`;
+const spark = (s = 20) => {
+  let rays = '';
+  for (let k = 0; k < 12; k++) {
+    const a = (k / 12) * Math.PI * 2, r1 = 2.2, r2 = k % 2 ? 8.2 : 10;
+    rays += `<line x1="${12 + r1 * Math.cos(a)}" y1="${12 + r1 * Math.sin(a)}" x2="${12 + r2 * Math.cos(a)}" y2="${12 + r2 * Math.sin(a)}"/>`;
+  }
+  return `<svg class="i spark" width="${s}" height="${s}" viewBox="0 0 24 24" style="stroke-width:2.3">${rays}</svg>`;
+};
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const fmt = n => n.toLocaleString('fr-FR');
+
+/* ---------- Coque de fenêtre ---------- */
+const NAV = [
+  ['Statistiques', [['overview', 'grid', "Vue d'ensemble"], ['rhythm', 'clock', 'Rythme'], ['projects', 'folder', 'Projets'], ['categories', 'cats', 'Catégories'], ['sessions', 'chat', 'Sessions']]],
+  ['Claude', [['tools', 'wrench', 'Claude au travail'], ['style', 'quote', 'Ton style'], ['limits', 'gauge', "Limites d'usage"]]],
+  ['Pour le fun', [['badges', 'badge', 'Badges'], ['wrapped', 'sparkles', 'Ton récap'], ['learn', 'bulb', 'Comprendre']]],
+];
+const PROJECTS = [['Portfolio', '11 h'], ['Thèse', '8,4 h'], ['Site vitrine', '6,1 h'], ['RecettesApp', '4,7 h']];
+
+function shell(active, inner, overlay = '') {
+  const nav = NAV.map(([g, items]) =>
+    `<div class="group">${g}</div>` + items.map(([id, ic, t]) =>
+      `<div class="nav ${id === active ? 'active' : ''}">${I(ic, 16)}<span>${t}</span></div>`).join('')).join('');
+  const projects = `<div class="group">Projets</div>` + PROJECTS.map(([p, h]) =>
+    `<div class="nav">${I('folder', 15)}<span>${p}</span><span class="meta num">${h}</span></div>`).join('');
+  return `
+  <div class="win">
+    <div class="halo h1"></div><div class="halo h2"></div>
+    <aside class="sidebar">
+      <div class="lights"><span style="background:#FF5F57"></span><span style="background:#FEBC2E"></span><span style="background:#28C840"></span></div>
+      <div class="brand">${spark(20)}ClaudeStats</div>
+      ${nav}
+      ${projects}
+      <div class="status">
+        <span class="dot"></span>
+        <div><b>Données à jour</b><small class="num">Analysé il y a 2 min</small></div>
+        <span class="iconbtn" style="margin-left:auto">${I('refresh', 14)}</span>
+      </div>
+    </aside>
+    <main class="stage">
+      <div class="toolbar">
+        <span class="iconbtn">${I('chevL', 16)}</span><span class="iconbtn" style="opacity:.45">${I('chevR', 16)}</span>
+        <div class="search">${I('search', 14)}<span>Rechercher une session, une page…</span><span class="kbd">⌘K</span></div>
+        <div class="tb-right">
+          <div class="seg"><span>7 j</span><span>30 j</span><span>90 j</span><span>1 an</span><span class="on">Tout</span></div>
+          <span class="btn glass">${I('filter', 14)}Toutes les sources ${I('chevD', 12)}</span>
+        </div>
+      </div>
+      <div class="content">${inner}</div>
+    </main>
+    ${overlay}
+  </div>`;
+}
+
+/* ---------- Briques ---------- */
+const card = (span, title, sub, icon, body, opts = {}) => `
+  <div class="card ${span} ${opts.featured ? 'featured' : ''}" ${opts.style ? `style="${opts.style}"` : ''}>
+    <div class="ch">${I(icon, 14)}<div><h3>${title}</h3>${sub ? `<small>${sub}</small>` : ''}</div>${opts.right ? `<div class="right">${opts.right}</div>` : ''}</div>
+    ${body}
+  </div>`;
+const kpi = (span, icon, label, val, ctx, opts = {}) => `
+  <div class="card kpi ${span} ${opts.featured ? 'featured' : ''}">
+    <div class="lbl">${I(icon, 13)}${label}</div>
+    <div class="val ${opts.txt ? 'txt' : ''}">${val}</div>
+    <div class="ctx">${ctx}</div>
+    ${opts.spark ? `<div class="spark">${opts.spark}</div>` : ''}
+  </div>`;
+const seg = (items, on) => `<div class="seg">${items.map((t, i) => `<span class="${i === on ? 'on' : ''}">${t}</span>`).join('')}</div>`;
+const rank = (items, opts = {}) => {
+  const max = Math.max(...items.map(x => x[1]));
+  return `<div class="rank">${items.map(([l, v, lbl], i) => `
+    <div class="r ${i === 0 && opts.accentTop !== false ? 'top' : ''}"><span class="n">${i + 1}</span><span>${l}</span><span class="v">${lbl ?? fmt(v)}</span>
+    <div class="bar"><i style="width:${(v / max) * 100}%"></i></div></div>`).join('')}</div>`;
+};
+const legend = rows => `<div class="legend">${rows.map(([c, l, v, p]) =>
+  `<div class="row"><span class="sw" style="background:${c}"></span><span>${l}</span><span class="v">${v}</span><span class="p">${p}</span></div>`).join('')}</div>`;
+
+function donut(segs, size, center, sub) {
+  const r = size / 2 - size * 0.07, c = 2 * Math.PI * r, sw = size * 0.14, total = segs.reduce((a, s) => a + s[1], 0);
+  let off = 0, arcs = '';
+  for (const [col, v] of segs) {
+    const len = (v / total) * c, gap = Math.min(2.5, len * 0.4);
+    arcs += `<circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${col}" stroke-width="${sw}"
+      stroke-dasharray="${Math.max(len - gap, 0.6)} ${c}" stroke-dashoffset="${-off}" transform="rotate(-90 ${size / 2} ${size / 2})"/>`;
+    off += len;
+  }
+  return `<div style="position:relative;width:${size}px;height:${size}px;flex:none">
+    <svg width="${size}" height="${size}">${arcs}</svg>
+    <div style="position:absolute;inset:0;display:grid;place-content:center;text-align:center">
+      <div class="num" style="font-size:${size * 0.15}px;font-weight:600;letter-spacing:-0.02em;line-height:1.1">${center}</div>
+      <div style="font-size:11px;color:var(--text-tertiary)">${sub}</div></div></div>`;
+}
+function spk(vals, w = 64, h = 22) {
+  const max = Math.max(...vals), min = Math.min(...vals);
+  const pts = vals.map((v, i) => [i / (vals.length - 1) * w, h - 2 - ((v - min) / (max - min || 1)) * (h - 4)]);
+  const last = pts[pts.length - 1];
+  return `<svg width="${w}" height="${h}"><polyline points="${pts.map(p => p.join(',')).join(' ')}" fill="none" stroke="var(--chart-neutral)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${last[0]}" cy="${last[1]}" r="2.5" fill="var(--accent)"/></svg>`;
+}
+const heat = t => t <= 0 ? 'var(--chart-track)' : `hsl(var(--accent-h) var(--accent-s) var(--accent-l) / ${t < 0.3 ? 0.2 : t < 0.55 ? 0.38 : t < 0.8 ? 0.62 : 1})`;
+
+/* ---------- Données de démo ---------- */
+const R = rng(7);
+const days = [];   // 22 juin → 24 oct 2026
+for (let d = new Date(2026, 5, 22); d <= new Date(2026, 9, 24); d.setDate(d.getDate() + 1)) {
+  const wk = d.getDay(), active = R() < (wk === 0 || wk === 6 ? 0.3 : 0.62) || d.getMonth() === 9 && R() < 0.4;
+  const trend = 0.7 + (d - new Date(2026, 5, 22)) / (1000 * 86400 * 120) * 0.8;
+  days.push({ d: new Date(d), v: active ? Math.round((4 + R() * R() * 34) * trend) : 0 });
+}
+days[95].v = 46;
+
+/* ---------- 1 · Vue d'ensemble ---------- */
+function overview() {
+  // Calendrier
+  const end = new Date(2026, 9, 24), start = new Date(end); start.setDate(start.getDate() - 52 * 7 - ((end.getDay() + 6) % 7));
+  const map = new Map(days.map(x => [x.d.toDateString(), x.v]));
+  const weeks = 53, left = 30, top = 18, gap = 4, cell = (1180 - left) / weeks - gap;
+  let cells = '', months = '', lastM = -1;
+  for (let w = 0; w < weeks; w++) for (let k = 0; k < 7; k++) {
+    const d = new Date(start); d.setDate(d.getDate() + w * 7 + k);
+    if (d > end) continue;
+    if (k === 0 && d.getMonth() !== lastM) { lastM = d.getMonth(); months += `<text class="axis" x="${left + w * (cell + gap)}" y="10">${d.toLocaleDateString('fr-FR', { month: 'short' })}</text>`; }
+    const v = map.get(d.toDateString()) ?? 0;
+    const today = d.toDateString() === end.toDateString();
+    cells += `<rect x="${left + w * (cell + gap)}" y="${top + k * (cell + gap)}" width="${cell}" height="${cell}" rx="3.5" fill="${heat(v / 40)}" ${today ? 'stroke="var(--text-secondary)" stroke-width="1.2"' : ''}/>`;
+  }
+  const dl = ['Lun', '', 'Mer', '', 'Ven', '', 'Dim'].map((t, k) => `<text class="axis" x="0" y="${top + k * (cell + gap) + 12}">${t}</text>`).join('');
+  const calW = left + weeks * (cell + gap), calH = top + 7 * (cell + gap);
+  const legendCells = [0, 0.2, 0.5, 0.7, 1].map(t => `<span style="width:11px;height:11px;border-radius:3px;background:${heat(t)}"></span>`).join('');
+  const cal = card('s12', "Calendrier d'activité", 'Chaque case est un jour : plus elle est foncée, plus tu as passé de temps avec Claude.', 'cal',
+    `<svg width="${calW}" height="${calH}" style="display:block">${months}${dl}${cells}</svg>
+     <div style="display:flex;align-items:center;margin-top:10px;font-size:11.5px;color:var(--text-tertiary)">
+       <span>Ta plus longue série : 13 jours, du 12 au 24 octobre</span>
+       <span style="margin-left:auto;display:flex;gap:4px;align-items:center">Moins ${legendCells} Plus</span></div>`,
+    { right: seg(['Temps', 'Messages'], 0) });
+
+  // Activité
+  const W = 770, H = 172, pad = 26, n = days.length, bw = (W - pad) / n;
+  let bars = '', line = '';
+  days.forEach((x, i) => { const h = x.v / 50 * (H - 22); bars += `<rect x="${pad + i * bw + 0.6}" y="${H - 18 - h}" width="${bw - 1.4}" height="${h}" rx="1.2" fill="var(--chart-neutral)"/>`; });
+  days.forEach((x, i) => { const s = days.slice(Math.max(0, i - 6), i + 1); const m = s.reduce((a, b) => a + b.v, 0) / s.length; line += `${i ? 'L' : 'M'}${pad + i * bw + bw / 2},${H - 18 - m / 50 * (H - 22)}`; });
+  const grid = [0, 20, 40].map(v => { const y = H - 18 - v / 50 * (H - 22); return `<line x1="${pad}" x2="${W}" y1="${y}" y2="${y}" stroke="var(--chart-grid)"/><text class="axis" x="0" y="${y + 4}">${v}</text>`; }).join('');
+  const xl = [['1 juil.', 9], ['1 août', 40], ['1 sept.', 71], ['1 oct.', 101]].map(([t, i]) => `<text class="axis" x="${pad + i * bw}" y="${H}">${t}</text>`).join('');
+  const act = card('s8', 'Ton activité au fil du temps', 'Messages envoyés par jour', 'bars',
+    `<svg width="${W}" height="${H}" style="display:block">${grid}${bars}<path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>${xl}</svg>
+     <div style="display:flex;gap:16px;margin-top:8px;font-size:11.5px;color:var(--text-tertiary)">
+       <span style="display:flex;gap:6px;align-items:center"><i style="width:8px;height:8px;border-radius:2px;background:var(--chart-neutral)"></i>Messages</span>
+       <span style="display:flex;gap:6px;align-items:center"><i style="width:12px;height:2px;border-radius:1px;background:var(--accent)"></i>Moyenne sur 7 jours</span></div>`);
+
+  const cats = [['var(--cat-1)', 'Développement', '21 h', '46 %', 21], ['var(--cat-2)', 'Études & cours', '7,2 h', '16 %', 7.2], ['var(--cat-3)', 'Design & créatif', '5 h', '11 %', 5],
+    ['var(--cat-4)', 'Rédaction', '4,6 h', '10 %', 4.6], ['var(--cat-5)', 'Automatisation', '3 h', '7 %', 3], ['var(--cat-other)', 'Autres', '4,9 h', '10 %', 4.9]];
+  const where = card('s4', 'Où passe ton temps', 'Répartition par catégorie', 'pie',
+    `<div style="display:flex;gap:22px;align-items:center">${donut(cats.map(c => [c[0], c[4]]), 124, '48 h', 'au total')}<div style="flex:1">${legend(cats.map(c => c.slice(0, 4)))}</div></div>`);
+
+  return `
+  <div class="hero">
+    <div><div class="eyebrow">Samedi 24 octobre</div><h1>Bon après-midi, Alex</h1>
+    <p>Depuis le 22 juin, tu as passé <b class="num" style="color:var(--text-primary);font-weight:600">48 h 03</b> avec Claude sur 59 jours, surtout sur « Portfolio ».</p></div>
+    <div class="actions"><span class="btn glass">${I('sun', 14)}Architecte de l'après-midi</span><span class="btn primary">${I('sparkles', 14)}Voir ton récap</span></div>
+  </div>
+  <div class="grid">
+    ${kpi('s3', 'chat', 'Sessions', '78', '<span class="up">▲ 18 %</span> vs 30 j précédents', { spark: spk([3, 5, 4, 6, 5, 8, 7, 9, 12, 11]) })}
+    ${kpi('s3', 'send', 'Messages envoyés', '768', '13 par jour actif', { spark: spk([20, 35, 30, 42, 38, 50, 61, 58, 72, 80]) })}
+    ${kpi('s3', 'clock', 'Temps passé', '48<span class="u">h</span> 03', '48 min par jour actif', { spark: spk([2, 3, 3, 5, 4, 6, 5, 7, 8, 9]) })}
+    ${kpi('s3', 'flame', 'Série en cours', '13<span class="u">jours</span>', 'Ton record, égalé aujourd’hui', { spark: spk([1, 2, 0, 3, 4, 2, 6, 9, 11, 13]) })}
+  </div>
+  <div class="grid">${cal}</div>
+  <div class="grid">${act}${where}</div>`;
+}
+
+/* ---------- 2 · Rythme ---------- */
+function rhythm() {
+  const r = rng(3), cell = 26, gap = 4, left = 36, top = 20;
+  const prof = h => Math.max(0, Math.exp(-((h - 17) ** 2) / 14) * 0.95 + Math.exp(-((h - 10.5) ** 2) / 6) * 0.45 + (h >= 21 && h <= 23 ? 0.18 : 0));
+  const dayW = [0.8, 0.85, 0.9, 1, 0.75, 0.35, 0.3];
+  let cells = '', hl = '';
+  for (let d = 0; d < 7; d++) for (let h = 0; h < 24; h++) {
+    let t = prof(h) * dayW[d] * (0.65 + r() * 0.6); if (t < 0.12) t = r() < 0.15 ? 0.15 : 0;
+    cells += `<rect x="${left + h * (cell + gap)}" y="${top + d * (cell + gap)}" width="${cell}" height="${cell}" rx="4" fill="${heat(t)}"/>`;
+  }
+  for (let h = 0; h < 24; h += 3) hl += `<text class="axis" x="${left + h * (cell + gap)}" y="11">${h} h</text>`;
+  const dl = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map((t, k) => `<text class="axis" x="0" y="${top + k * (cell + gap) + 17}">${t}</text>`).join('');
+  const W = left + 24 * (cell + gap), H = top + 7 * (cell + gap);
+  const week = card('s8', 'Semaine type', 'Temps passé par jour et par heure, sur toute la période', 'cal',
+    `<svg width="${W}" height="${H}" style="display:block">${hl}${dl}${cells}</svg>`, { right: seg(['Temps', 'Messages'], 0) });
+
+  const days = card('s4', 'Jours de la semaine', 'Part de ton temps', 'bars',
+    rank([['Jeudi', 21, '21 %'], ['Mercredi', 18, '18 %'], ['Mardi', 17, '17 %'], ['Lundi', 16, '16 %'], ['Vendredi', 14, '14 %'], ['Samedi', 8, '8 %'], ['Dimanche', 6, '6 %']]));
+
+  // Heures favorites
+  const Wb = 770, Hb = 170, pad = 26, bw = (Wb - pad) / 24;
+  let bars = '', xl = '';
+  for (let h = 0; h < 24; h++) {
+    const v = prof(h) * 100, hh = v / 100 * (Hb - 44);
+    bars += `<rect x="${pad + h * bw + 3}" y="${Hb - 18 - hh}" width="${bw - 6}" height="${Math.max(hh, 2)}" rx="3" fill="${h === 17 ? 'var(--accent)' : 'var(--chart-neutral)'}"/>`;
+    if (h % 3 === 0) xl += `<text class="axis" x="${pad + h * bw + 3}" y="${Hb}">${h} h</text>`;
+  }
+  const g = [0, 50, 100].map(v => { const y = Hb - 18 - v / 100 * (Hb - 24); return `<line x1="${pad}" x2="${Wb}" y1="${y}" y2="${y}" stroke="var(--chart-grid)"/>`; }).join('');
+  const hours = card('s8', 'Heures favorites', 'Messages envoyés par heure de la journée', 'clock',
+    `<svg width="${Wb}" height="${Hb}" style="display:block">${g}${bars}${xl}
+      <text class="axis" x="${pad + 17 * bw + bw / 2}" y="${Hb - 18 - prof(17) * (Hb - 44) - 8}" text-anchor="middle" style="fill:var(--text-secondary);font-weight:600">17 h</text></svg>`);
+
+  const streakRows = [['12 → 24 oct.', 13, true], ['8 → 17 sept.', 10], ['14 → 21 juil.', 8], ['18 → 23 août', 6]];
+  const streaks = card('s4', 'Séries', 'Jours consécutifs avec au moins une session', 'flame',
+    `<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px"><span class="num" style="font-size:40px;font-weight:600;letter-spacing:-0.03em;line-height:1">13</span><span style="color:var(--text-secondary)">jours en cours</span></div>
+     <div style="font-size:12px;color:var(--text-tertiary);margin-bottom:14px">Record égalé : encore 1 jour pour le battre.</div>
+     ${rank(streakRows.map(([l, v]) => [l, v, v + ' j']))}`);
+
+  return `
+  <div class="head"><div><h1>Rythme</h1><p>Quand tu travailles avec Claude : tes heures, tes jours et tes séries.</p></div></div>
+  <div class="grid">
+    ${kpi('s3', 'sun', 'Ton chronotype', 'Architecte de l’après-midi', '62 % de ton temps entre 13 h et 19 h', { featured: true, txt: true })}
+    ${kpi('s3', 'clock', 'Heure de pointe', '17 h – 18 h', '11 % de tes messages')}
+    ${kpi('s3', 'cal', 'Jour favori', 'Jeudi', '21 % de ton temps')}
+    ${kpi('s3', 'trophy', 'Plus tardive', '1 h 42', 'Le 3 septembre, sur « Thèse »')}
+  </div>
+  <div class="grid">${week}${days}</div>
+  <div class="grid">${hours}${streaks}</div>`;
+}
+
+/* ---------- 3 · Claude au travail ---------- */
+function tools() {
+  const fam = [['var(--cat-1)', 'Fichiers', '1,9 k', '62 %', 62], ['var(--cat-2)', 'Terminal', '614', '20 %', 20], ['var(--cat-3)', 'Web', '392', '13 %', 13],
+    ['var(--cat-4)', 'Planification', '61', '2 %', 2], ['var(--cat-5)', 'Navigateur', '47', '2 %', 2], ['var(--cat-other)', 'Autres', '59', '1 %', 1]];
+  const toolsCard = card('s7', 'Outils favoris de Claude', 'Les 8 outils les plus appelés', 'wrench',
+    `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 28px">${rank([['Read', 729], ['Edit', 640], ['Bash', 614], ['Write', 234]])}${rank([['WebSearch', 232], ['Grep', 197], ['WebFetch', 160], ['Glob', 112]].map(x => x), { accentTop: false }).replace(/<span class="n">(\d)<\/span>/g, (m, d) => `<span class="n">${+d + 4}</span>`)}</div>`,
+    { right: `<span class="btn glass" style="height:24px;font-size:12px">Tout voir</span>` });
+  const famCard = card('s5', 'Par famille', 'À quoi servent ces actions', 'layers',
+    `<div style="display:flex;gap:22px;align-items:center">${donut(fam.map(f => [f[0], f[4]]), 132, '3,1 k', 'actions')}<div style="flex:1">${legend(fam.map(f => f.slice(0, 4)))}</div></div>`);
+
+  const parts = [['Lecture du cache', '247 M', 'Contexte déjà connu, relu à prix réduit', 96.2, 'var(--chart-neutral)'],
+    ['Écriture du cache', '7 M', 'Nouveau contexte mis en cache', 2.7, 'var(--cat-2)'],
+    ['Entrée', '14 k', 'Tokens envoyés sans cache', 0.25, 'var(--cat-4)'],
+    ['Sortie', '2,2 M', 'Ce que Claude a écrit', 0.85, 'var(--accent)']];
+  const anat = card('s12', 'Anatomie de tes tokens', '257 M tokens traités · 117 $ en équivalent API', 'token',
+    `<div style="display:flex;height:10px;border-radius:5px;overflow:hidden;gap:2px;margin-bottom:16px">${parts.map(p => `<i style="flex:${Math.max(p[3], 0.6)};background:${p[4]}"></i>`).join('')}</div>
+     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px">${parts.map(p => `
+       <div><div style="display:flex;gap:7px;align-items:center;font-size:12px;color:var(--text-secondary)"><i style="width:8px;height:8px;border-radius:2.5px;background:${p[4]}"></i>${p[0]}</div>
+       <div class="num" style="font-size:22px;font-weight:600;letter-spacing:-0.02em;margin-top:4px">${p[1]}</div>
+       <div style="font-size:12px;color:var(--text-tertiary)">${p[2]}</div></div>`).join('')}</div>
+     <div class="note"><span class="ib">${I('bulb', 15)}</span><div><b>Pourquoi autant de cache ?</b>À chaque message, Claude relit toute la conversation. Grâce au cache de prompt, 97 % de cette relecture vient d'un contexte déjà mémorisé, facturé environ 10 fois moins cher.</div></div>`);
+
+  const models = card('s6', 'Modèles utilisés', 'Part des réponses', 'brain',
+    rank([['Opus 5.5', 68, '68 %'], ['Sonnet 5.5', 25, '25 %'], ['Haiku 5.5', 5, '5 %'], ['Fable 5.1', 2, '2 %']]));
+  const langs = card('s6', 'Langages écrits', 'Lignes ajoutées par type de fichier', 'code',
+    rank([['Markdown', 6200, '6,2 k'], ['Python', 3900, '3,9 k'], ['LaTeX', 3400, '3,4 k'], ['Swift', 3200, '3,2 k']], { accentTop: false }));
+
+  return `
+  <div class="head"><div><h1>Claude au travail</h1><p>Ce que Claude fait pour toi en coulisses : outils, commandes, fichiers, modèles et tokens.</p></div>
+    <div class="actions"><span class="btn glass">${I('export', 14)}Exporter</span></div></div>
+  <div class="grid">
+    ${kpi('s3', 'wrench', 'Actions effectuées', '3,1<span class="u">k</span>', '4 par message envoyé')}
+    ${kpi('s3', 'term', 'Commandes shell', '614', 'La plus fréquente : <span style="font-family:ui-monospace,monospace;color:var(--text-secondary)">ls</span>')}
+    ${kpi('s3', 'file', 'Fichiers modifiés', '44', '729 lectures de fichiers')}
+    ${kpi('s3', 'code', 'Lignes ajoutées', '+31<span class="u">k</span>', '−4,2 k supprimées')}
+  </div>
+  <div class="grid">${toolsCard}${famCard}</div>
+  <div class="grid">${anat}</div>
+  <div class="grid">${models}${langs}</div>`;
+}
+
+/* ---------- 4 · Sessions + palette ⌘K ---------- */
+function sessions() {
+  const C = { dev: ['var(--cat-1)', 'Développement'], study: ['var(--cat-2)', 'Études'], design: ['var(--cat-3)', 'Design'], write: ['var(--cat-4)', 'Rédaction'], auto: ['var(--cat-5)', 'Automatisation'] };
+  const rows = [
+    ['Animation du compteur de série', 'ClaudeStats · aujourd’hui 14:12', 'dev', 0.4, '38 min', 14, '210 k', '0,90 $'],
+    ['Révision chapitre 3 : méthodologie', 'Thèse · hier 21:40', 'study', 0.7, '1 h 12', 22, '480 k', '1,85 $'],
+    ['Refonte complète de la page projets', 'Portfolio · jeu. 25 sept. 14:02', 'dev', 1, '2 h 51', 46, '1,2 M', '4,80 $'],
+    ['Palette de couleurs du site vitrine', 'Site vitrine · 23 sept. 10:15', 'design', 0.45, '52 min', 17, '260 k', '1,10 $'],
+    ['Synthèse budget du trimestre', 'Budget perso · 22 sept. 18:30', 'write', 0.3, '31 min', 9, '96 k', '0,40 $'],
+    ['Script d’import des relevés CSV', 'Budget perso · 21 sept. 09:05', 'auto', 0.55, '1 h 04', 19, '340 k', '1,30 $'],
+    ['Courbes de résultats en matplotlib', 'Thèse · 20 sept. 16:48', 'study', 0.62, '1 h 18', 25, '520 k', '2,05 $'],
+    ['Formulaire de contact accessible', 'Site vitrine · 19 sept. 11:20', 'dev', 0.35, '44 min', 12, '180 k', '0,75 $'],
+    ['Tests unitaires du Store', 'RecettesApp · 18 sept. 15:02', 'dev', 0.5, '58 min', 16, '300 k', '1,20 $'],
+    ['Plan détaillé de la conclusion', 'Thèse · 17 sept. 20:10', 'write', 0.28, '27 min', 8, '88 k', '0,35 $'],
+    ['Galerie photo responsive', 'Site vitrine · 16 sept. 10:40', 'design', 0.48, '55 min', 15, '240 k', '0,98 $'],
+    ['Migration vers SwiftData', 'RecettesApp · 15 sept. 14:22', 'dev', 0.8, '1 h 46', 31, '760 k', '3,05 $'],
+  ];
+  const table = `<div class="card" style="padding:6px 8px;flex:1;min-width:0"><div class="table">
+    <div class="th"><span>Session</span><span>Catégorie</span><span>Activité</span><span class="r" style="color:inherit">Durée ${I('chevD', 9)}</span><span class="r" style="color:inherit">Msg</span><span class="r" style="color:inherit">Tokens</span><span class="r" style="color:inherit">Coût</span></div>
+    ${rows.map((r, i) => `<div class="tr ${i === 2 ? 'sel' : ''}"><div style="min-width:0"><b>${r[0]}</b><small>${r[1]}</small></div>
+      <span><span class="tag"><span class="d" style="background:${C[r[2]][0]}"></span>${C[r[2]][1]}</span></span>
+      <div class="mini"><i style="width:${r[3] * 100}%;${i === 2 ? 'background:var(--accent)' : ''}"></i></div>
+      <span class="r">${r[4]}</span><span class="r">${r[5]}</span><span class="r">${r[6]}</span><span class="r">${r[7]}</span></div>`).join('')}
+  </div></div>`;
+  const stat = (l, v) => `<div style="padding:10px 12px;border-radius:10px;background:var(--fill-1);box-shadow:inset 0 0 0 1px var(--border-subtle)"><div style="font-size:11.5px;color:var(--text-tertiary)">${l}</div><div class="num" style="font-size:18px;font-weight:600;letter-spacing:-0.015em">${v}</div></div>`;
+  const insp = `<div class="card" style="width:340px;flex:none">
+    <div class="eyebrow">Session sélectionnée</div>
+    <div style="font-size:16px;font-weight:600;letter-spacing:-0.012em;margin:6px 0 4px;line-height:1.3">Refonte complète de la page projets</div>
+    <div style="font-size:12px;color:var(--text-tertiary);display:flex;gap:6px;align-items:center">${I('folder', 12)} Portfolio · jeu. 25 sept. · 14:02 → 16:53</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:16px 0 18px">${stat('Durée', '2 h 51')}${stat('Messages', '46')}${stat('Tokens', '1,2 M')}${stat('Équivalent API', '4,80 $')}</div>
+    <div class="ch" style="margin-bottom:10px">${I('wrench', 14)}<div><h3>Outils</h3></div></div>
+    ${rank([['Edit', 38], ['Read', 31], ['Bash', 22], ['Write', 9]])}
+    <div class="ch" style="margin:18px 0 10px">${I('brain', 14)}<div><h3>Modèles</h3></div></div>
+    <div style="display:flex;gap:6px"><span class="tag">Opus 5.5 · 41</span><span class="tag">Haiku 5.5 · 5</span></div>
+    <div class="ch" style="margin:18px 0 8px">${I('chat', 14)}<div><h3>Tes messages</h3></div></div>
+    <div style="font-size:12.5px;color:var(--text-secondary);display:grid;gap:8px">
+      <div style="padding-left:10px;box-shadow:inset 2px 0 0 var(--border-strong)">On refait la page projets : grille de cartes, filtres par techno…</div>
+      <div style="padding-left:10px;box-shadow:inset 2px 0 0 var(--border-strong)">Les cartes sautent au survol, on peut adoucir ?</div></div>
+  </div>`;
+  const inner = `
+  <div class="head"><div><h1>Sessions</h1><p class="num">78 sessions · 48 h 03 · 768 messages</p></div>
+    <div class="actions">${seg(['Toutes', 'Code', 'Cowork', 'Chat'], 0)}<span class="btn glass">${I('filter', 14)}Trier : récentes</span></div></div>
+  <div style="display:flex;gap:var(--gap-grid);align-items:flex-start">${table}${insp}</div>`;
+
+  const it = (ic, title, sub, on, keys = '↵') => `<div class="it ${on ? 'on' : ''}"><span class="ib">${I(ic, 13)}</span><span>${title}</span><small>${sub}</small><span class="k">${keys.split(' ').map(k => `<span class="kbd">${k}</span>`).join('')}</span></div>`;
+  const overlay = `<div class="veil"></div><div class="palette">
+    <div class="in">${I('search', 18)}<span>refonte<span class="caret"></span></span><span class="kbd" style="margin-left:auto">esc</span></div>
+    <div class="grp eyebrow">Sessions</div>
+    ${it('chat', '<mark>Refonte</mark> complète de la page projets', 'Portfolio · 25 sept.', true)}
+    ${it('chat', '<mark>Refonte</mark> du README et des captures', 'ClaudeStats · 3 oct.', false, '')}
+    ${it('chat', '<mark>Refonte</mark> du tableau de budget', 'Budget perso · 12 août', false, '')}
+    <div class="grp eyebrow">Pages</div>
+    ${it('folder', 'Projets', 'Statistiques', false, '⌘ 3')}
+    <div class="grp eyebrow">Actions</div>
+    ${it('export', 'Exporter ton récap en PNG', '', false, '⌘ E')}
+    ${it('refresh', 'Actualiser les données', '', false, '⌘ R')}
+    <div class="foot"><span><span class="kbd">↑</span><span class="kbd">↓</span> naviguer</span><span><span class="kbd">↵</span> ouvrir</span><span><span class="kbd">⌘</span><span class="kbd">↵</span> ouvrir dans l’inspecteur</span></div>
+  </div>`;
+  return [inner, overlay];
+}
+
+/* ---------- 5 · Catégories (clair) ---------- */
+function categories() {
+  const cats = [['var(--cat-1)', 'Développement', 21, 31, 'Portfolio, RecettesApp, ClaudeStats'], ['var(--cat-2)', 'Études & cours', 7.2, 14, 'Thèse'],
+    ['var(--cat-3)', 'Design & créatif', 5, 9, 'Site vitrine, Portfolio'], ['var(--cat-4)', 'Rédaction & documents', 4.6, 10, 'Thèse, Budget perso'],
+    ['var(--cat-5)', 'Automatisation & outils', 3, 6, 'Budget perso, scripts'], ['var(--cat-6)', 'Données & analyse', 2.8, 5, 'Thèse'], ['var(--cat-other)', 'Autres', 4.4, 3, 'Vie perso, recherche']];
+  const tot = 48;
+  const top = kpi('s4', 'star', 'Ta catégorie n°1', 'Développement', '', { featured: true, txt: true }).replace('<div class="ctx"></div>',
+    `<div style="display:flex;align-items:baseline;gap:8px;margin-top:14px"><span class="num" style="font-size:40px;font-weight:600;letter-spacing:-0.03em;line-height:1">21<span style="font-size:22px;color:var(--text-secondary);font-weight:500"> h</span></span><span style="color:var(--text-secondary)">44 % de ton temps</span></div>
+     <div style="font-size:12px;color:var(--text-tertiary);margin-top:8px">31 sessions · surtout « Portfolio » et « RecettesApp »</div>
+     <div style="display:flex;height:6px;border-radius:3px;overflow:hidden;gap:2px;margin-top:18px">${cats.map(c => `<i style="flex:${c[2]};background:${c === cats[0] ? c[0] : 'var(--chart-track)'}"></i>`).join('')}</div>
+     <div style="display:grid;gap:7px;margin-top:16px;font-size:12.5px">${[['Portfolio', '9,2 h'], ['RecettesApp', '6,4 h'], ['ClaudeStats', '3,1 h']].map(([p, h]) =>
+       `<div style="display:flex;gap:8px;align-items:center;color:var(--text-secondary)">${I('folder', 13)}<span>${p}</span><span class="num" style="margin-left:auto;color:var(--text-tertiary)">${h}</span></div>`).join('')}</div>`);
+
+  // Barres empilées par semaine
+  const r = rng(11), W = 770, H = 196, pad = 26, n = 18, bw = (W - pad) / n;
+  let bars = '', xl = '';
+  for (let w = 0; w < n; w++) {
+    let y = H - 18; const scale = (0.4 + r() * 0.8) * (0.7 + w / n * 0.7);
+    cats.forEach((c, k) => { const h = c[2] / tot * 140 * scale * (0.6 + r() * 0.8); bars += `<rect x="${pad + w * bw + 5}" y="${y - h}" width="${bw - 10}" height="${Math.max(h - 1.5, 0)}" rx="1.5" fill="${c[0]}"/>`; y -= h; });
+    if (w % 4 === 1) xl += `<text class="axis" x="${pad + w * bw + 5}" y="${H}">${['29 juin', '27 juil.', '24 août', '21 sept.', '19 oct.'][Math.floor(w / 4)]}</text>`;
+  }
+  const g = [0, 2, 4].map(v => { const y = H - 18 - v / 4 * 140; return `<line x1="${pad}" x2="${W}" y1="${y}" y2="${y}" stroke="var(--chart-grid)"/><text class="axis" x="0" y="${y + 4}">${v} h</text>`; }).join('');
+  const evo = card('s8', 'Évolution par semaine', 'Heures passées par catégorie', 'bars', `<svg width="${W}" height="${H}" style="display:block">${g}${bars}${xl}</svg>`,
+    { right: seg(['Heures', 'Part'], 0) });
+
+  const donutCard = card('s4', 'Répartition', 'Part du temps total', 'pie',
+    `<div style="display:grid;place-items:center;margin:4px 0 18px">${donut(cats.map(c => [c[0], c[2]]), 170, '48 h', '7 catégories')}</div>
+     ${legend(cats.slice(0, 4).map(c => [c[0], c[1], String(c[2]).replace('.', ',') + ' h', Math.round(c[2] / tot * 100) + ' %']))}`);
+
+  const table = card('s8', 'Détail par catégorie', 'Classement automatique d’après tes messages', 'cats',
+    `<div class="table"><div class="th" style="grid-template-columns:1.3fr 70px 70px 1fr 1.2fr"><span>Catégorie</span><span class="r" style="color:inherit">Temps</span><span class="r" style="color:inherit">Sessions</span><span>Part du temps</span><span>Projets principaux</span></div>
+     ${cats.map((c, i) => `<div class="tr" style="grid-template-columns:1.3fr 70px 70px 1fr 1.2fr;height:36px">
+       <span style="display:flex;gap:9px;align-items:center;font-weight:500"><i style="width:8px;height:8px;border-radius:2.5px;background:${c[0]}"></i>${c[1]}</span>
+       <span class="r">${String(c[2]).replace('.', ',')} h</span><span class="r">${c[3]}</span>
+       <span style="display:flex;gap:10px;align-items:center"><span class="mini" style="flex:1"><i style="width:${c[2] / 21 * 100}%;${i === 0 ? 'background:var(--accent)' : ''}"></i></span><span class="num" style="color:var(--text-tertiary);width:32px;text-align:right">${Math.round(c[2] / tot * 100)} %</span></span>
+       <span style="color:var(--text-tertiary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c[4]}</span></div>`).join('')}</div>`);
+
+  return `
+  <div class="head"><div><h1>Catégories</h1><p>Ce que tu demandes à Claude, classé automatiquement à partir de tes messages.</p></div>
+    <div class="actions">${seg(['Temps', 'Sessions', 'Messages'], 0)}</div></div>
+  <div class="grid">${top}${evo}</div>
+  <div class="grid">${donutCard}${table}</div>`;
+}
+
+/* ---------- Routage ---------- */
+const screen = (location.hash || '#1').slice(1);
+let html;
+if (screen === '1') html = shell('overview', overview());
+if (screen === '2') html = shell('rhythm', rhythm());
+if (screen === '3') html = shell('tools', tools());
+if (screen === '4') { const [a, b] = sessions(); html = shell('sessions', a, b); }
+if (screen === '5') { document.documentElement.dataset.theme = 'light'; html = shell('categories', categories()); }
+document.getElementById('root').innerHTML = html;
+</script>
+</body>
+</html>

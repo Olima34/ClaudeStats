@@ -53,15 +53,15 @@ struct SessionsPage: View {
                 StatTile(symbol: "number", value: Fmt.dec(s.avgPromptsPerSession), label: "Messages par session",
                          detail: "Médiane : \(Fmt.dec(s.medianPromptsPerSession))")
                 StatTile(symbol: "timer", value: Fmt.duration(s.avgSessionSeconds), label: "Durée moyenne",
-                         detail: "Médiane : \(Fmt.duration(s.medianSessionSeconds))", tint: Theme.palette[1])
+                         detail: "Médiane : \(Fmt.duration(s.medianSessionSeconds))")
                 StatTile(symbol: "hourglass", value: Fmt.duration(s.claudeSeconds), label: "Claude a travaillé",
-                         detail: "\(Fmt.duration(s.avgTurnSeconds)) par réponse en moyenne", tint: Theme.palette[2])
+                         detail: "\(Fmt.duration(s.avgTurnSeconds)) par réponse en moyenne")
                 StatTile(symbol: "arrow.triangle.branch", value: Fmt.int(s.sources.reduce(0) { $0 + $1.count }), label: "Sessions",
-                         detail: s.sources.map { "\($0.count) \($0.name)" }.joined(separator: " · "), tint: Theme.palette[3])
+                         detail: s.sources.map { "\($0.count) \($0.name)" }.joined(separator: " · "))
             }
             HStack(alignment: .top, spacing: 18) {
-                histogram(title: "Taille des sessions", subtitle: "Nombre de messages envoyés par session", data: s.sessionLengthBuckets, color: Theme.accent)
-                histogram(title: "Durée des sessions", subtitle: "Temps actif par session", data: s.sessionDurationBuckets, color: Theme.palette[1])
+                histogram(title: "Taille des sessions", subtitle: "Nombre de messages envoyés par session", data: s.sessionLengthBuckets)
+                histogram(title: "Durée des sessions", subtitle: "Temps actif par session", data: s.sessionDurationBuckets)
             }
             controls
             HStack(alignment: .top, spacing: 18) {
@@ -76,14 +76,15 @@ struct SessionsPage: View {
         }
     }
 
-    private func histogram(title: String, subtitle: String, data: [NamedCount], color: Color) -> some View {
-        Panel(title: title, subtitle: subtitle, symbol: "chart.bar") {
+    private func histogram(title: String, subtitle: String, data: [NamedCount]) -> some View {
+        let peak = data.max(by: { $0.count < $1.count })?.name
+        return Panel(title: title, subtitle: subtitle, symbol: "chart.bar") {
             Chart(data) { b in
                 BarMark(x: .value("Tranche", b.name), y: .value("Sessions", b.count), width: .ratio(0.65))
-                    .foregroundStyle(color)
-                    .cornerRadius(4)
+                    .foregroundStyle(b.name == peak ? Theme.accent : Theme.chartNeutral)
+                    .cornerRadius(3)
                     .annotation(position: .top) {
-                        Text(b.count > 0 ? "\(b.count)" : "").font(.ui(10)).foregroundStyle(Theme.text3)
+                        Text(b.count > 0 ? "\(b.count)" : "").font(.ui(11)).foregroundStyle(Theme.text3).monospacedDigit()
                     }
             }
             .chartXAxisStyle()
@@ -99,8 +100,8 @@ struct SessionsPage: View {
                 HStack(spacing: 6) {
                     FilterChip(label: "Toutes", symbol: nil, selected: category == nil) { category = nil }
                     ForEach(s.categories) { c in
-                        FilterChip(label: c.category.label, symbol: c.category.symbol, selected: category == c.category,
-                                   tint: Theme.color(c.category)) {
+                        FilterChip(label: c.category.label, symbol: nil, selected: category == c.category,
+                                   dot: Theme.color(c.category)) {
                             category = category == c.category ? nil : c.category
                         }
                     }
@@ -108,6 +109,7 @@ struct SessionsPage: View {
             }
             .scrollIndicators(.never)
             Spacer()
+            searchField
             let automatic = s.sessions.filter { $0.prompts == 0 }.count
             if automatic > 0 {
                 Toggle(isOn: $showAutomatic) {
@@ -118,6 +120,28 @@ struct SessionsPage: View {
             }
             PillPicker(options: SortKey.allCases, selection: $sort, label: { $0.label })
         }
+    }
+
+    private var searchField: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass").font(.ui(11)).foregroundStyle(Theme.text3)
+            TextField("Filtrer", text: $model.search)
+                .textFieldStyle(.plain)
+                .font(.ui(12.5))
+                .foregroundStyle(Theme.text)
+                .frame(width: 130)
+            if !model.search.isEmpty {
+                Button { model.search = "" } label: {
+                    Image(systemName: "xmark.circle.fill").font(.ui(11)).foregroundStyle(Theme.text3)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Effacer le filtre")
+            }
+        }
+        .padding(.horizontal, 9)
+        .frame(height: 28)
+        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.fill1))
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(model.search.isEmpty ? Theme.border : Theme.accentRim))
     }
 
     private var list: some View {
@@ -132,10 +156,10 @@ struct SessionsPage: View {
                     Text("Tokens").frame(width: 58, alignment: .trailing)
                     Text("Coût").frame(width: 56, alignment: .trailing)
                 }
-                .font(.ui(10.5, .semibold))
+                .font(.ui(11, .semibold))
                 .foregroundStyle(Theme.text3)
                 .padding(.horizontal, 16)
-                .padding(.vertical, 10)
+                .frame(height: 32)
                 Rectangle().fill(Theme.border).frame(height: 1)
                 if rows.isEmpty {
                     EmptyHint(text: model.search.isEmpty ? "Aucune session." : "Aucune session ne correspond à « \(model.search) ».")
@@ -151,7 +175,7 @@ struct SessionsPage: View {
                     Button("Afficher \(min(60, rows.count - visible)) de plus (\(rows.count - visible) restantes)") { visible += 60 }
                         .buttonStyle(.plain)
                         .font(.ui(12, .medium))
-                        .foregroundStyle(Theme.accent)
+                        .foregroundStyle(Theme.text2)
                         .padding(14)
                 }
             }
@@ -164,20 +188,28 @@ struct FilterChip: View {
     var label: String
     var symbol: String?
     var selected: Bool
-    var tint: Color = Theme.accent
+    var dot: Color? = nil
     var action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 5) {
+            HStack(spacing: 6) {
+                if let dot { Circle().fill(dot).frame(width: 6, height: 6) }
                 if let symbol { Image(systemName: symbol).font(.ui(10)) }
-                Text(label).font(.ui(11.5, selected ? .semibold : .regular))
+                Text(label).font(.ui(12, .medium))
             }
-            .foregroundStyle(selected ? tint : Theme.text2)
+            .foregroundStyle(selected ? Theme.text : Theme.text2)
             .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(Capsule().fill(selected ? tint.opacity(0.15) : Theme.card))
-            .overlay(Capsule().strokeBorder(selected ? tint.opacity(0.4) : Theme.border))
+            .frame(height: 26)
+            .background {
+                let shape = RoundedRectangle(cornerRadius: 7, style: .continuous)
+                if selected {
+                    shape.fill(Theme.fill3).overlay(TopRim(radius: 7))
+                } else {
+                    shape.fill(Theme.fill1)
+                }
+            }
+            .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous).strokeBorder(Theme.border))
         }
         .buttonStyle(.plain)
     }
@@ -194,9 +226,13 @@ struct SessionRowView: View {
             HStack(spacing: 10) {
                 Image(systemName: row.category.symbol)
                     .font(.ui(11))
-                    .foregroundStyle(Theme.color(row.category))
-                    .frame(width: 26, height: 26)
-                    .background(RoundedRectangle(cornerRadius: 7).fill(Theme.color(row.category).opacity(0.13)))
+                    .foregroundStyle(Theme.text2)
+                    .frame(width: 28, height: 28)
+                    .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Theme.fill2))
+                    .overlay(alignment: .bottomTrailing) {
+                        Circle().fill(Theme.color(row.category)).frame(width: 7, height: 7).offset(x: 2, y: 2)
+                    }
+                    .help(row.category.label)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(row.title)
                         .font(.ui(12.5, .medium))
@@ -208,7 +244,7 @@ struct SessionRowView: View {
                         if row.isScheduled { Text("· planifiée") }
                         if row.isArchived { Text("· archivée") }
                     }
-                    .font(.ui(10.5))
+                    .font(.ui(11.5))
                     .foregroundStyle(Theme.text3)
                     .lineLimit(1)
                 }
@@ -221,12 +257,19 @@ struct SessionRowView: View {
             Text(Fmt.compact(row.tokens)).frame(width: 58, alignment: .trailing)
             Text(row.cost > 0 ? Fmt.money(row.cost) : "–").frame(width: 56, alignment: .trailing)
         }
-        .font(.ui(11.5))
+        .font(.ui(12))
         .foregroundStyle(Theme.text2)
         .monospacedDigit()
         .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(selected ? Theme.selected : (hovering ? Theme.hover.opacity(0.6) : .clear))
+        .frame(minHeight: 46)
+        .background {
+            if selected {
+                Theme.accentSoft.overlay(alignment: .leading) { Theme.accent.frame(width: 2) }
+            } else if hovering {
+                Theme.fill1
+            }
+        }
+        .overlay(alignment: .bottom) { Theme.border.frame(height: 1) }
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
         .contextMenu { SessionMenu(row: row) }
@@ -282,13 +325,13 @@ struct SessionDetail: View {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(alignment: .top) {
                     Text(row.title)
-                        .font(.serif(19))
+                        .font(.display(17))
                         .foregroundStyle(Theme.text)
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer()
                     Button { model.selectedSession = nil } label: {
                         Image(systemName: "xmark").font(.ui(10, .bold)).foregroundStyle(Theme.text3)
-                            .frame(width: 22, height: 22).background(Circle().fill(Theme.track))
+                            .frame(width: 22, height: 22).background(Circle().fill(Theme.fill2))
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Fermer le détail")
@@ -330,7 +373,7 @@ struct SessionDetail: View {
 
                 if !tools.isEmpty {
                     SectionLabel(text: "Outils les plus utilisés")
-                    RankList(items: tools, limit: 5, tint: { _, _ in Theme.palette[1] }, numbered: false)
+                    RankList(items: tools, limit: 5, numbered: false)
                 }
                 if !prompts.isEmpty {
                     SectionLabel(text: "Tes messages (\(prompts.count))")

@@ -50,11 +50,11 @@ struct LimitsPage: View {
                 StatTile(symbol: "gauge.with.dots.needle.100percent", value: Fmt.int(fullHits), label: "Fenêtres de 5 h saturées",
                          detail: "Fois où tu as atteint 100 %")
                 StatTile(symbol: "calendar.badge.clock", value: "\(Fmt.int(peakWeekly)) %", label: "Pic hebdomadaire",
-                         detail: "Plus haute part du quota de la semaine", tint: Theme.palette[1])
+                         detail: "Plus haute part du quota de la semaine")
                 StatTile(symbol: "speedometer", value: "\(Fmt.int(avg5h)) %", label: "Fenêtre 5 h moyenne",
-                         detail: "Niveau moyen relevé", tint: Theme.palette[2])
+                         detail: "Niveau moyen relevé")
                 StatTile(symbol: "exclamationmark.octagon", value: Fmt.int(s.usageLimitHits), label: "Messages « limite atteinte »",
-                         detail: "Dans tes transcripts", tint: Theme.palette[5])
+                         detail: "Dans tes transcripts")
             }
             if sm.isEmpty {
                 Card {
@@ -66,13 +66,13 @@ struct LimitsPage: View {
                     Chart {
                         ForEach(daily) { d in
                             BarMark(x: .value("Jour", d.date, unit: .day), y: .value("5 h", d.fiveHour))
-                                .foregroundStyle(d.fiveHour >= 99.5 ? Theme.accentDeep : Theme.accent.opacity(0.55))
+                                .foregroundStyle(d.fiveHour >= 99.5 ? Theme.accent : Theme.chartNeutral)
                                 .cornerRadius(3)
                         }
                         ForEach(daily) { d in
                             LineMark(x: .value("Jour", d.date, unit: .day), y: .value("Semaine", d.weekly))
                                 .foregroundStyle(Theme.palette[1])
-                                .lineStyle(StrokeStyle(lineWidth: 2.2))
+                                .lineStyle(StrokeStyle(lineWidth: 2))
                                 .interpolationMethod(.linear)
                             PointMark(x: .value("Jour", d.date, unit: .day), y: .value("Semaine", d.weekly))
                                 .foregroundStyle(Theme.palette[1])
@@ -88,14 +88,14 @@ struct LimitsPage: View {
                     .chartYScale(domain: 0...110)
                     .chartXAxis {
                         AxisMarks(values: .automatic(desiredCount: 8)) { _ in
-                            AxisValueLabel(format: .dateTime.day().month(.abbreviated)).font(.ui(10)).foregroundStyle(Theme.text3)
+                            AxisValueLabel(format: .dateTime.day().month(.abbreviated)).font(.ui(11)).foregroundStyle(Theme.text3)
                         }
                     }
                     .chartYAxisStyle()
                     .frame(height: 250)
                     HStack(spacing: 16) {
-                        legend(Theme.accent.opacity(0.55), "Pic de la fenêtre de 5 h")
-                        legend(Theme.accentDeep, "Limite de 5 h atteinte")
+                        legend(Theme.chartNeutral, "Pic de la fenêtre de 5 h")
+                        legend(Theme.accent, "Limite de 5 h atteinte")
                         legend(Theme.palette[1], "Quota de la semaine")
                         Spacer()
                         Text("Seuls les jours où l'app Claude était ouverte ont des relevés.")
@@ -106,7 +106,7 @@ struct LimitsPage: View {
                     let byHour = hourly(sm)
                     Chart(byHour, id: \.0) { h in
                         BarMark(x: .value("Heure", "\(h.0)"), y: .value("%", h.1), width: .ratio(0.7))
-                            .foregroundStyle(h.1 >= 50 ? Theme.accentDeep : Theme.accent.opacity(0.75))
+                            .foregroundStyle(h.1 >= 50 ? Theme.accent : Theme.chartNeutral)
                             .cornerRadius(3)
                     }
                     .chartXAxis {

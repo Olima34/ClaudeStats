@@ -39,17 +39,17 @@ struct RhythmPage: View {
     private var chronotype: some View {
         let (label, text) = Insights.chronotypeDetail(s)
         let night = s.peakHour < 5 || s.peakHour >= 22
-        return Card(padding: 22) {
+        return Card(padding: 22, featured: true) {
             HStack(spacing: 22) {
                 ZStack {
-                    Circle().fill(Theme.accent.opacity(0.13)).frame(width: 74, height: 74)
+                    Circle().fill(Theme.accentSoft).frame(width: 64, height: 64)
                     Image(systemName: night ? "moon.stars.fill" : (s.peakHour < 12 ? "sunrise.fill" : (s.peakHour < 18 ? "sun.max.fill" : "sunset.fill")))
-                        .font(.system(size: 30))
+                        .font(.system(size: 26))
                         .foregroundStyle(Theme.accent)
                 }
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Ton chronotype").font(.ui(11.5)).foregroundStyle(Theme.text3)
-                    Text(label).font(.serif(30)).foregroundStyle(Theme.text)
+                    Text("Ton chronotype").font(.ui(12)).foregroundStyle(Theme.text2)
+                    Text(label).font(.display(26)).foregroundStyle(Theme.text)
                     Text(text).font(.ui(13)).foregroundStyle(Theme.text2)
                 }
                 Spacer()
@@ -63,15 +63,6 @@ struct RhythmPage: View {
         }
     }
 
-    private func bandColor(_ h: Int) -> Color {
-        switch h {
-        case 0..<6: return Theme.palette[4]
-        case 6..<12: return Theme.palette[7]
-        case 12..<18: return Theme.palette[0]
-        default: return Theme.palette[1]
-        }
-    }
-
     private var hoursChart: some View {
         Panel(title: "Heures de la journée", subtitle: hoursByTime ? "Temps d'activité cumulé par heure" : "Messages envoyés par heure", symbol: "clock") {
             PillPicker(options: [true, false].map(BoolOption.init), selection: Binding(get: { BoolOption(hoursByTime) }, set: { hoursByTime = $0.value }),
@@ -79,7 +70,8 @@ struct RhythmPage: View {
         } content: {
             Chart(s.hours) { h in
                 BarMark(x: .value("Heure", "\(h.hour)"), y: .value("Valeur", hoursByTime ? h.seconds / 3600 : Double(h.prompts)), width: .ratio(0.72))
-                    .foregroundStyle(bandColor(h.hour).opacity(hoverHour == nil || hoverHour == h.hour ? 1 : 0.4))
+                    .foregroundStyle(h.hour == s.peakHour ? Theme.accent : Theme.chartNeutral)
+                    .opacity(hoverHour == nil || hoverHour == h.hour ? 1 : 0.4)
                     .cornerRadius(3)
             }
             .chartXAxis {
@@ -111,12 +103,8 @@ struct RhythmPage: View {
                     Text("\(h) h – \(h + 1) h : \(Fmt.hours(st.seconds)), \(Fmt.plural(st.prompts, "message", "messages"))")
                         .font(.ui(11.5)).foregroundStyle(Theme.text2)
                 } else {
-                    ForEach([("Nuit", 0), ("Matin", 6), ("Après-midi", 12), ("Soir", 18)], id: \.0) { item in
-                        HStack(spacing: 5) {
-                            Circle().fill(bandColor(item.1)).frame(width: 7, height: 7)
-                            Text(item.0).font(.ui(11)).foregroundStyle(Theme.text3)
-                        }
-                    }
+                    Text("Ton heure de pointe : \(s.peakHour) h – \(s.peakHour + 1) h. Survole une barre pour le détail.")
+                        .font(.ui(11.5)).foregroundStyle(Theme.text3)
                 }
                 Spacer()
             }
@@ -124,10 +112,13 @@ struct RhythmPage: View {
     }
 
     private var weekdayChart: some View {
-        Panel(title: "Jours de la semaine", subtitle: "Temps moyen par jour actif", symbol: "calendar") {
+        let busiestAvg = s.weekdays.max(by: { a, b in
+            (a.activeDays > 0 ? a.seconds / Double(a.activeDays) : 0) < (b.activeDays > 0 ? b.seconds / Double(b.activeDays) : 0)
+        })?.weekday ?? -1
+        return Panel(title: "Jours de la semaine", subtitle: "Temps moyen par jour actif", symbol: "calendar") {
             Chart(s.weekdays) { w in
                 BarMark(x: .value("Jour", w.name), y: .value("Heures", w.activeDays > 0 ? w.seconds / 3600 / Double(w.activeDays) : 0), width: .ratio(0.6))
-                    .foregroundStyle(w.weekday >= 5 ? Theme.palette[1] : Theme.accent)
+                    .foregroundStyle(w.weekday == busiestAvg ? Theme.accent : Theme.chartNeutral)
                     .cornerRadius(4)
                     .annotation(position: .top) {
                         Text(w.activeDays > 0 ? Fmt.hours(w.seconds / Double(w.activeDays)) : "")
@@ -148,7 +139,7 @@ struct RhythmPage: View {
             Chart {
                 ForEach(s.days) { d in
                     BarMark(x: .value("Jour", d.date, unit: .day), y: .value("Heures", d.seconds / 3600))
-                        .foregroundStyle(d.seconds / 3600 > 6 ? Theme.accentDeep : Theme.accent.opacity(0.8))
+                        .foregroundStyle(Theme.chartNeutral)
                         .cornerRadius(2)
                 }
                 if s.secondsPerActiveDay > 0 {
@@ -178,7 +169,7 @@ struct RhythmPage: View {
                 ForEach(Array(s.topDays.enumerated()), id: \.offset) { i, d in
                     RankRow(rank: i + 1, name: Fmt.cap(Fmt.weekday(d.date)),
                             value: "\(Fmt.plural(d.prompts, "message", "messages")) · \(Fmt.hours(d.seconds))",
-                            fraction: Double(d.prompts) / maxP, tint: i == 0 ? Theme.accent : Theme.accent.opacity(0.7))
+                            fraction: Double(d.prompts) / maxP, tint: i == 0 ? Theme.accent : Theme.chartNeutral)
                 }
             }
         }
@@ -188,7 +179,7 @@ struct RhythmPage: View {
         Panel(title: "Séries", subtitle: "Jours consécutifs avec au moins une session", symbol: "flame") {
             VStack(alignment: .leading, spacing: 16) {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text("\(s.streakCurrent)").font(.serif(46)).foregroundStyle(Theme.accent)
+                    Text("\(s.streakCurrent)").font(.display(44)).foregroundStyle(Theme.text).monospacedDigit()
                     Text(s.streakCurrent > 1 ? "jours d'affilée en ce moment" : "jour d'affilée en ce moment")
                         .font(.ui(12.5)).foregroundStyle(Theme.text2)
                 }
@@ -221,7 +212,7 @@ extension RhythmPage {
                 }
                 if let t = s.records.longestTurn {
                     HStack(alignment: .top, spacing: 10) {
-                        Image(systemName: "hourglass").font(.ui(12)).foregroundStyle(Theme.accent).frame(width: 18)
+                        Image(systemName: "hourglass").font(.ui(12)).foregroundStyle(Theme.text3).frame(width: 18)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Plus longue réponse de Claude : \(Fmt.duration(t.seconds))").font(.ui(12, .medium)).foregroundStyle(Theme.text)
                             Text(t.title).font(.ui(11)).foregroundStyle(Theme.text3).lineLimit(1)
@@ -234,7 +225,7 @@ extension RhythmPage {
 
     func recordLine(symbol: String, title: String, date: Date, text: String) -> some View {
         HStack(alignment: .top, spacing: 10) {
-            Image(systemName: symbol).font(.ui(12)).foregroundStyle(Theme.accent).frame(width: 18)
+            Image(systemName: symbol).font(.ui(12)).foregroundStyle(Theme.text3).frame(width: 18)
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(title) : \(Fmt.clock(date))").font(.ui(12, .medium)).foregroundStyle(Theme.text)
                 Text("\(Fmt.cap(Fmt.weekday(date))) · « \(Dataset.snippet(text, 50)) »").font(.ui(11)).foregroundStyle(Theme.text3).lineLimit(1)
@@ -248,8 +239,8 @@ struct MiniStat: View {
     var label: String
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(value).font(.serif(19)).foregroundStyle(Theme.text).lineLimit(1)
-            Text(label).font(.ui(10.5)).foregroundStyle(Theme.text3).lineLimit(1)
+            Text(value).font(.display(18)).foregroundStyle(Theme.text).monospacedDigit().lineLimit(1)
+            Text(label).font(.ui(11)).foregroundStyle(Theme.text3).lineLimit(1)
         }
     }
 }

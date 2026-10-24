@@ -35,6 +35,13 @@ struct ClaudeStatsApp: App {
                 Button("Tout relire depuis zéro") { model.rebuildCache() }
             }
             CommandMenu("Aller à") {
+                Button("Rechercher…") { model.showPalette = true }
+                    .keyboardShortcut("k")
+                Button("Page précédente") { model.goBack() }
+                    .keyboardShortcut("[")
+                Button("Page suivante") { model.goForward() }
+                    .keyboardShortcut("]")
+                Divider()
                 ForEach(Array(Page.allCases.enumerated()), id: \.element) { i, p in
                     if i < 9 {
                         Button(p.title) { model.page = p }

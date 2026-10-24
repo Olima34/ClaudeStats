@@ -52,11 +52,11 @@ struct CalendarHeatmap: View {
                             let d = startDay + col * 7 + row
                             if d <= end {
                                 let v = byDay[d].map(metric) ?? 0
-                                RoundedRectangle(cornerRadius: min(5, cell * 0.25), style: .continuous)
+                                RoundedRectangle(cornerRadius: min(4, cell * 0.22), style: .continuous)
                                     .fill(Theme.heat(v / max(ref, 0.0001)))
                                     .overlay(
-                                        RoundedRectangle(cornerRadius: min(5, cell * 0.25), style: .continuous)
-                                            .strokeBorder(hovered == d ? Theme.text : (d == end ? Theme.text3 : .clear), lineWidth: hovered == d ? 1.4 : 0.8)
+                                        RoundedRectangle(cornerRadius: min(4, cell * 0.22), style: .continuous)
+                                            .strokeBorder(hovered == d ? Theme.text : (d == end ? Theme.text2 : .clear), lineWidth: hovered == d ? 1.4 : 1)
                                     )
                                     .frame(width: cell, height: cell)
                                     .offset(x: labelW + CGFloat(col) * (cell + gap), y: 16 + CGFloat(row) * (cell + gap))
@@ -85,8 +85,8 @@ struct CalendarHeatmap: View {
                 }
                 Spacer()
                 Text("Moins").font(.ui(10.5)).foregroundStyle(Theme.text3)
-                ForEach([0.0, 0.2, 0.4, 0.6, 0.8, 1.0], id: \.self) { t in
-                    RoundedRectangle(cornerRadius: 2.5).fill(Theme.heat(t)).frame(width: 11, height: 11)
+                ForEach([0.0, 0.2, 0.5, 0.7, 1.0], id: \.self) { t in
+                    RoundedRectangle(cornerRadius: 3, style: .continuous).fill(Theme.heat(t)).frame(width: 11, height: 11)
                 }
                 Text("Plus").font(.ui(10.5)).foregroundStyle(Theme.text3)
             }
@@ -121,12 +121,11 @@ struct PunchCard: View {
                     ForEach(cells) { c in
                         let v = useTime ? c.seconds : Double(c.prompts)
                         let t = maxV > 0 ? v / maxV : 0
-                        let d = max(3, min(cw, ch) * 0.9 * sqrt(t))
-                        Circle()
-                            .fill(t > 0 ? Theme.accent.opacity(0.3 + 0.7 * t) : Theme.track)
-                            .frame(width: t > 0 ? d : 3.5, height: t > 0 ? d : 3.5)
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .fill(Theme.heat(t))
+                            .overlay(RoundedRectangle(cornerRadius: 4, style: .continuous).strokeBorder(hovered == c.id ? Theme.text : .clear, lineWidth: 1.2))
+                            .padding(1.5)
                             .frame(width: cw, height: ch)
-                            .overlay(Circle().strokeBorder(hovered == c.id ? Theme.text : .clear, lineWidth: 1).frame(width: d + 4, height: d + 4))
                             .contentShape(Rectangle())
                             .onHover { inside in hovered = inside ? c.id : (hovered == c.id ? nil : hovered) }
                             .offset(x: labelW + CGFloat(c.hour) * cw, y: CGFloat(c.weekday) * ch)
@@ -147,7 +146,7 @@ struct PunchCard: View {
                     Text("\(Fmt.cap(Fmt.weekdayLong[c.weekday])) entre \(c.hour) h et \(c.hour + 1) h : \(Fmt.plural(c.prompts, "message", "messages")), \(Fmt.hours(c.seconds)) d'activité")
                         .foregroundStyle(Theme.text2)
                 } else {
-                    Text("La taille de chaque point indique ton activité à ce moment de la semaine.")
+                    Text("Plus une case est foncée, plus tu es actif à ce moment de la semaine.")
                         .foregroundStyle(Theme.text3)
                 }
             }
@@ -173,8 +172,8 @@ struct WordCloud: View {
                 let t = maxC > minC ? (Double(w.count) - minC) / (maxC - minC) : 1
                 let rank = top.firstIndex(of: w) ?? 0
                 Text(w.name)
-                    .font(.serif(13 + 25 * sqrt(t), t > 0.5 ? .semibold : .regular))
-                    .foregroundStyle(rank < 3 ? Theme.accent : Theme.color(index: rank).opacity(0.55 + 0.45 * t))
+                    .font(.display(13 + 25 * sqrt(t), t > 0.5 ? .semibold : .regular))
+                    .foregroundStyle(rank < 3 ? Theme.accent : Theme.text.opacity(0.4 + 0.5 * t))
                     .help("\(w.name) : \(Fmt.plural(w.count, "fois", "fois"))")
             }
         }
@@ -206,10 +205,10 @@ struct Donut: View {
             ZStack {
                 Chart(items) { it in
                     SectorMark(angle: .value("Valeur", it.value),
-                               innerRadius: .ratio(0.64),
+                               innerRadius: .ratio(0.72),
                                outerRadius: .ratio(selected == nil || selected == it.id ? 1 : 0.94),
                                angularInset: 1.2)
-                        .cornerRadius(3)
+                        .cornerRadius(2)
                         .foregroundStyle(it.color)
                         .opacity(selected == nil || selected == it.id ? 1 : 0.45)
                 }
@@ -217,10 +216,10 @@ struct Donut: View {
                 .frame(width: size, height: size)
                 VStack(spacing: 2) {
                     if let s = selected, let it = items.first(where: { $0.id == s }) {
-                        Text(Fmt.pct(it.value / total)).font(.serif(24)).foregroundStyle(Theme.text)
+                        Text(Fmt.pct(it.value / total)).font(.display(22)).foregroundStyle(Theme.text).monospacedDigit()
                         Text(it.label).font(.ui(10.5)).foregroundStyle(Theme.text3).lineLimit(2).multilineTextAlignment(.center)
                     } else {
-                        Text(centerValue).font(.serif(24)).foregroundStyle(Theme.text)
+                        Text(centerValue).font(.display(22)).foregroundStyle(Theme.text).monospacedDigit()
                         Text(centerLabel).font(.ui(10.5)).foregroundStyle(Theme.text3)
                     }
                 }
@@ -229,11 +228,11 @@ struct Donut: View {
             VStack(alignment: .leading, spacing: 7) {
                 ForEach(items) { it in
                     HStack(spacing: 8) {
-                        RoundedRectangle(cornerRadius: 3).fill(it.color).frame(width: 10, height: 10)
+                        RoundedRectangle(cornerRadius: 2.5, style: .continuous).fill(it.color).frame(width: 8, height: 8)
                         if let s = it.symbol {
-                            Image(systemName: s).font(.ui(10.5)).foregroundStyle(it.color).frame(width: 14)
+                            Image(systemName: s).font(.ui(10.5)).foregroundStyle(Theme.text3).frame(width: 14)
                         }
-                        Text(it.label).font(.ui(12)).foregroundStyle(Theme.text).lineLimit(1)
+                        Text(it.label).font(.ui(12.5)).foregroundStyle(Theme.text).lineLimit(1)
                         Spacer(minLength: 6)
                         Text(valueText(it.value)).font(.ui(11.5)).foregroundStyle(Theme.text2).monospacedDigit()
                         Text(Fmt.pct(it.value / total)).font(.ui(11)).foregroundStyle(Theme.text3).monospacedDigit()
@@ -253,17 +252,22 @@ struct Donut: View {
 
 struct Sparkline: View {
     var values: [Double]
-    var color: Color = Theme.accent
+    var color: Color = Theme.chartNeutral
 
     var body: some View {
         Chart(Array(values.enumerated()), id: \.offset) { i, v in
             AreaMark(x: .value("i", i), y: .value("v", v))
                 .interpolationMethod(.monotone)
-                .foregroundStyle(LinearGradient(colors: [color.opacity(0.35), color.opacity(0.02)], startPoint: .top, endPoint: .bottom))
+                .foregroundStyle(LinearGradient(colors: [color.opacity(0.25), color.opacity(0)], startPoint: .top, endPoint: .bottom))
             LineMark(x: .value("i", i), y: .value("v", v))
                 .interpolationMethod(.monotone)
                 .foregroundStyle(color)
                 .lineStyle(StrokeStyle(lineWidth: 1.5))
+            if i == values.count - 1 {
+                PointMark(x: .value("i", i), y: .value("v", v))
+                    .foregroundStyle(Theme.accent)
+                    .symbolSize(22)
+            }
         }
         .chartXAxis(.hidden)
         .chartYAxis(.hidden)
@@ -283,7 +287,7 @@ extension View {
     func chartXAxisStyle() -> some View {
         self.chartXAxis {
             AxisMarks { _ in
-                AxisValueLabel().font(.ui(10)).foregroundStyle(Theme.text3)
+                AxisValueLabel().font(.ui(11)).foregroundStyle(Theme.text3)
             }
         }
     }
@@ -291,8 +295,8 @@ extension View {
     func chartYAxisStyle() -> some View {
         self.chartYAxis {
             AxisMarks(position: .leading) { _ in
-                AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [2, 3])).foregroundStyle(Theme.border)
-                AxisValueLabel().font(.ui(10)).foregroundStyle(Theme.text3)
+                AxisGridLine(stroke: StrokeStyle(lineWidth: 1)).foregroundStyle(Theme.chartGrid)
+                AxisValueLabel().font(.ui(11)).foregroundStyle(Theme.text3)
             }
         }
     }

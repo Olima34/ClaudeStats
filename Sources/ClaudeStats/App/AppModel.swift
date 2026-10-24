@@ -58,7 +58,20 @@ final class AppModel: ObservableObject {
     @Published var allTime = Stats()
     /// Whole history with the current source / project filters (for the calendar).
     @Published var history = Stats()
-    @Published var page: Page = .overview
+    @Published var page: Page = .overview {
+        didSet {
+            guard page != oldValue else { return }
+            if movingInHistory {
+                movingInHistory = false
+            } else {
+                backStack.append(oldValue)
+                forwardStack.removeAll()
+            }
+        }
+    }
+    @Published private(set) var backStack: [Page] = []
+    @Published private(set) var forwardStack: [Page] = []
+    @Published var showPalette = false
     @Published var filter = StatsFilter() {
         didSet { if filter != oldValue { recompute() } }
     }
@@ -70,6 +83,7 @@ final class AppModel: ObservableObject {
     @Published var importMessage: String?
     @Published var showSources = false
 
+    private var movingInHistory = false
     private var raw: RawData?
     private var generation = 0
     private var overrides: [String: Category] = [:]
@@ -169,6 +183,20 @@ final class AppModel: ObservableObject {
     }
 
     // MARK: Navigation helpers
+
+    func goBack() {
+        guard let p = backStack.popLast() else { return }
+        forwardStack.append(page)
+        movingInHistory = true
+        page = p
+    }
+
+    func goForward() {
+        guard let p = forwardStack.popLast() else { return }
+        backStack.append(page)
+        movingInHistory = true
+        page = p
+    }
 
     func open(project: String) {
         filter.project = project

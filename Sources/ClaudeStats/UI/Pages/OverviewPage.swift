@@ -15,7 +15,7 @@ struct OverviewPage: View {
                 Card { EmptyHint(text: "Aucune activité \(s.filter.period.longLabel). Essaie une période plus longue.") }
             } else {
                 kpis
-                Panel(title: "Calendrier d'activité", subtitle: "Toute ton histoire : chaque case est un jour, plus elle est bleue, plus tu as été actif.", symbol: "calendar") {
+                Panel(title: "Calendrier d'activité", subtitle: "Toute ton histoire : chaque case est un jour, plus elle est foncée, plus tu as été actif.", symbol: "calendar") {
                     PillPicker(options: [true, false].map(BoolOption.init), selection: Binding(get: { BoolOption(heatByTime) }, set: { heatByTime = $0.value }),
                                label: { $0.value ? "Temps" : "Messages" })
                 } content: {
@@ -43,46 +43,40 @@ struct OverviewPage: View {
     // MARK: Hero
 
     private var hero: some View {
-        ZStack(alignment: .topLeading) {
-            MatrixBackdrop(seed: 11, opacity: 0.45)
-                .frame(height: 170)
-                .mask(LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom))
-                .offset(y: -10)
-            HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(spacing: 14) {
-                        ClaudeSpark(size: 34, animate: true)
-                        Text(Fmt.greeting(name: model.dataset.account.displayName))
-                            .font(.serif(36))
-                            .foregroundStyle(Theme.text)
-                    }
-                    Text(heroSentence)
-                        .font(.ui(14))
-                        .foregroundStyle(Theme.text2)
-                        .fixedSize(horizontal: false, vertical: true)
-                    if s.hasData {
-                        let p = Insights.persona(s)
-                        Button { model.page = .wrapped } label: {
-                            HStack(spacing: 7) {
-                                Image(systemName: p.symbol).font(.ui(11, .semibold))
-                                Text("Ton profil : \(p.title)").font(.ui(12, .semibold))
-                                Image(systemName: "chevron.right").font(.ui(9, .bold))
-                            }
-                            .foregroundStyle(Theme.accent)
-                            .padding(.horizontal, 11)
-                            .padding(.vertical, 6)
-                            .background(Capsule().fill(Theme.accent.opacity(0.14)))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                Spacer()
-                PixelMascot(pixel: 7)
-                    .padding(.trailing, 24)
+        HStack(alignment: .bottom, spacing: 16) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(Fmt.weekday(Date()).uppercased())
+                    .font(.ui(11, .semibold))
+                    .tracking(0.66)
+                    .foregroundStyle(Theme.text3)
+                Text(Fmt.greeting(name: model.dataset.account.displayName))
+                    .font(.display(34, .bold))
+                    .foregroundStyle(Theme.text)
+                Text(heroSentence)
+                    .font(.ui(13.5))
+                    .foregroundStyle(Theme.text2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(.top, 26)
-            .padding(.bottom, 6)
+            Spacer(minLength: 16)
+            if s.hasData {
+                let p = Insights.persona(s)
+                HStack(spacing: 8) {
+                    Label(p.title, systemImage: p.symbol)
+                        .font(.ui(12.5, .medium))
+                        .foregroundStyle(Theme.text2)
+                        .padding(.horizontal, 10)
+                        .frame(height: 28)
+                        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.fill1))
+                        .help("Ton profil d'utilisateur")
+                    Button { model.page = .wrapped } label: {
+                        Label("Voir ton récap", systemImage: "sparkles")
+                    }
+                    .buttonStyle(SoftButtonStyle(prominent: true))
+                }
+            }
         }
+        .padding(.top, 22)
+        .padding(.bottom, 4)
     }
 
     private var heroSentence: String {
@@ -103,18 +97,17 @@ struct OverviewPage: View {
             StatTile(symbol: "paperplane", value: Fmt.int(s.promptCount), label: "Messages envoyés",
                      detail: "\(Fmt.dec(s.promptsPerActiveDay)) par jour actif")
             StatTile(symbol: "clock", value: Fmt.hours(s.activeSeconds), label: "Temps passé",
-                     detail: "\(Fmt.hours(s.secondsPerActiveDay)) par jour actif", tint: Theme.palette[1])
+                     detail: "\(Fmt.hours(s.secondsPerActiveDay)) par jour actif")
             StatTile(symbol: "calendar", value: Fmt.int(s.activeDays), label: "Jours actifs",
-                     detail: s.spanDays > 0 ? "sur \(Fmt.plural(s.spanDays, "jour", "jours")) (\(Fmt.pct(Double(s.activeDays) / Double(max(1, s.spanDays)))))" : nil,
-                     tint: Theme.palette[1])
+                     detail: s.spanDays > 0 ? "sur \(Fmt.plural(s.spanDays, "jour", "jours")) (\(Fmt.pct(Double(s.activeDays) / Double(max(1, s.spanDays)))))" : nil)
             StatTile(symbol: "text.word.spacing", value: Fmt.compact(s.tokens.output), label: "Tokens générés",
-                     detail: "\(Fmt.compact(s.tokens.total)) traités au total", tint: Theme.palette[2])
+                     detail: "\(Fmt.compact(s.tokens.total)) traités au total")
             StatTile(symbol: "creditcard", value: Fmt.money(s.cost), label: "Équivalent API",
-                     detail: "Estimation au tarif public", tint: Theme.palette[2])
+                     detail: "Estimation au tarif public")
             StatTile(symbol: "chevron.left.forwardslash.chevron.right", value: Fmt.compact(s.linesAdded), label: "Lignes écrites",
-                     detail: "−\(Fmt.compact(s.linesRemoved)) supprimées · \(Fmt.int(s.filesTouched)) fichiers", tint: Theme.palette[3])
+                     detail: "−\(Fmt.compact(s.linesRemoved)) supprimées · \(Fmt.int(s.filesTouched)) fichiers")
             StatTile(symbol: "flame", value: Fmt.plural(s.streakCurrent, "jour", "jours"), label: "Série en cours",
-                     detail: "Record : \(Fmt.plural(s.streakLongest, "jour", "jours")) d'affilée", tint: Theme.palette[3])
+                     detail: "Record : \(Fmt.plural(s.streakLongest, "jour", "jours")) d'affilée")
         }
     }
 
@@ -125,20 +118,20 @@ struct OverviewPage: View {
             Chart {
                 ForEach(s.days) { d in
                     BarMark(x: .value("Jour", d.date, unit: .day), y: .value("Messages", d.prompts))
-                        .foregroundStyle(Theme.accent.opacity(0.75))
-                        .cornerRadius(2)
+                        .foregroundStyle(Theme.chartNeutral)
+                        .cornerRadius(1.5)
                 }
                 ForEach(s.days) { d in
                     LineMark(x: .value("Jour", d.date, unit: .day), y: .value("Moyenne", d.avg7))
                         .interpolationMethod(.monotone)
-                        .foregroundStyle(Theme.text2)
-                        .lineStyle(StrokeStyle(lineWidth: 1.6))
+                        .foregroundStyle(Theme.accent)
+                        .lineStyle(StrokeStyle(lineWidth: 2))
                 }
             }
             .chartXAxis {
                 AxisMarks(values: .automatic(desiredCount: 6)) { _ in
                     AxisValueLabel(format: .dateTime.day().month(.abbreviated), centered: false)
-                        .font(.ui(10)).foregroundStyle(Theme.text3)
+                        .font(.ui(11)).foregroundStyle(Theme.text3)
                 }
             }
             .chartYAxisStyle()
@@ -184,13 +177,13 @@ struct OverviewPage: View {
                 Card(padding: 16) {
                     HStack(alignment: .top, spacing: 12) {
                         Image(systemName: f.symbol)
-                            .font(.ui(15))
-                            .foregroundStyle(Theme.accent)
-                            .frame(width: 34, height: 34)
-                            .background(RoundedRectangle(cornerRadius: 9).fill(Theme.accent.opacity(0.12)))
+                            .font(.ui(14))
+                            .foregroundStyle(Theme.text2)
+                            .frame(width: 36, height: 36)
+                            .background(RoundedRectangle(cornerRadius: Theme.radiusInner, style: .continuous).fill(Theme.fill2))
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(f.title).font(.ui(11.5)).foregroundStyle(Theme.text3)
-                            Text(f.value).font(.serif(21)).foregroundStyle(Theme.text).lineLimit(1).minimumScaleFactor(0.7)
+                            Text(f.title).font(.ui(12)).foregroundStyle(Theme.text3)
+                            Text(f.value).font(.display(21)).monospacedDigit().foregroundStyle(Theme.text).lineLimit(1).minimumScaleFactor(0.7)
                             Text(f.detail).font(.ui(11.5)).foregroundStyle(Theme.text2).fixedSize(horizontal: false, vertical: true)
                         }
                     }
@@ -234,16 +227,16 @@ struct Highlight: View {
         Card(padding: 16) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 6) {
-                    Image(systemName: symbol).font(.ui(11, .semibold)).foregroundStyle(Theme.accent)
-                    Text(title).font(.ui(11.5)).foregroundStyle(Theme.text3)
+                    Image(systemName: symbol).font(.ui(11.5)).foregroundStyle(Theme.text3)
+                    Text(title).font(.ui(12)).foregroundStyle(Theme.text2)
                     Spacer()
                     if action != nil {
                         Image(systemName: "arrow.up.right").font(.ui(9.5, .semibold)).foregroundStyle(Theme.text3)
                             .opacity(hovering ? 1 : 0)
                     }
                 }
-                Text(value).font(.serif(20)).foregroundStyle(Theme.text).lineLimit(1).minimumScaleFactor(0.7)
-                Text(detail).font(.ui(11.5)).foregroundStyle(Theme.text2).lineLimit(2)
+                Text(value).font(.display(20)).foregroundStyle(Theme.text).monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
+                Text(detail).font(.ui(12)).foregroundStyle(Theme.text3).lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }

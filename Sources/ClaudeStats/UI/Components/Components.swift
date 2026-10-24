@@ -415,38 +415,31 @@ struct Callout: View {
 
 // MARK: - Segmented control
 
-/// macOS-style segmented control. Stays neutral: the accent is not for navigation state.
+/// macOS-style segmented control with a draggable liquid glass bubble. Stays neutral: the accent is not for navigation state.
 struct PillPicker<T: Hashable & Identifiable>: View {
     var options: [T]
     @Binding var selection: T
     var label: (T) -> String
-    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         HStack(spacing: 0) {
             ForEach(options) { o in
-                let on = o == selection
                 Button {
-                    withAnimation(.easeOut(duration: 0.16)) { selection = o }
+                    selection = o
                 } label: {
                     Text(label(o))
                         .font(.ui(12, .medium))
-                        .foregroundStyle(on ? Theme.text : Theme.text2)
+                        .foregroundStyle(o == selection ? Theme.text : Theme.text2)
                         .padding(.horizontal, 10)
                         .frame(height: 24)
-                        .background {
-                            if on {
-                                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                    .fill(scheme == .dark ? Theme.fill3 : Color.white)
-                                    .overlay(TopRim(radius: 6))
-                                    .shadow(color: .black.opacity(scheme == .dark ? 0.25 : 0.12), radius: 1, y: 1)
-                            }
-                        }
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .liquidItem(o)
             }
         }
+        .liquidSelection(selection, axis: .horizontal, radius: 6) { selection = $0 }
+        .animation(.easeOut(duration: 0.2), value: selection)
         .padding(2)
         .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.fill1))
         .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Theme.border))

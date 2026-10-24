@@ -151,11 +151,15 @@ final class AppModel: ObservableObject {
         let ds = dataset
         let f = filter
         let all = allTime
+        let started = Date()
         Task.detached(priority: .userInitiated) {
             let s = StatsEngine.compute(ds, filter: f)
             var hf = f
             hf.period = .all
             let h = hf == f ? s : (hf == StatsFilter() ? all : StatsEngine.compute(ds, filter: hf))
+            // New figures re-render the whole page: let the selection bubble settle first.
+            let wait = 0.4 - Date().timeIntervalSince(started)
+            if wait > 0 { try? await Task.sleep(nanoseconds: UInt64(wait * 1e9)) }
             await MainActor.run {
                 guard gen == self.generation else { return }
                 withAnimation(.easeOut(duration: 0.25)) {

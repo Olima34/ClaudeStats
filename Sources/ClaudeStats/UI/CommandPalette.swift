@@ -6,6 +6,7 @@ struct CommandPalette: View {
     @State private var query = ""
     @State private var selection = 0
     @FocusState private var focused: Bool
+    @Namespace private var bubble
 
     struct Item: Identifiable {
         var id: String
@@ -59,9 +60,16 @@ struct CommandPalette: View {
                                         .padding(.bottom, 2)
                                 }
                                 row(item, selected: i == selection)
+                                    .matchedGeometryEffect(id: item.id, in: bubble, isSource: true)
+                                    .padding(.horizontal, 6)
                                     .id(item.id)
                                     .onTapGesture { selection = i; activate(items) }
                                     .onHover { if $0 { selection = i } }
+                            }
+                        }
+                        .background {
+                            if items.indices.contains(selection) {
+                                GlassBubble(selection: items[selection].id, namespace: bubble, radius: 8, axis: .vertical)
                             }
                         }
                         .padding(.vertical, 6)
@@ -163,13 +171,7 @@ struct CommandPalette: View {
         }
         .padding(.horizontal, 10)
         .frame(height: 38)
-        .background {
-            if selected {
-                RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.fill2).overlay(TopRim(radius: 8))
-            }
-        }
         .contentShape(Rectangle())
-        .padding(.horizontal, 6)
     }
 
     private func hint(_ keys: [String], _ text: String) -> some View {

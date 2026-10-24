@@ -99,13 +99,19 @@ struct SessionsPage: View {
             ScrollView(.horizontal) {
                 HStack(spacing: 6) {
                     FilterChip(label: "Toutes", symbol: nil, selected: category == nil) { category = nil }
+                        .liquidItem("all")
                     ForEach(s.categories) { c in
                         FilterChip(label: c.category.label, symbol: nil, selected: category == c.category,
                                    dot: Theme.color(c.category)) {
                             category = category == c.category ? nil : c.category
                         }
+                        .liquidItem(c.category.rawValue)
                     }
                 }
+                .liquidSelection(category?.rawValue ?? "all", axis: .horizontal, radius: 7) { id in
+                    category = Category(rawValue: id)
+                }
+                .padding(.vertical, 4)
             }
             .scrollIndicators(.never)
             Spacer()
@@ -201,15 +207,9 @@ struct FilterChip: View {
             .foregroundStyle(selected ? Theme.text : Theme.text2)
             .padding(.horizontal, 10)
             .frame(height: 26)
-            .background {
-                let shape = RoundedRectangle(cornerRadius: 7, style: .continuous)
-                if selected {
-                    shape.fill(Theme.fill3).overlay(TopRim(radius: 7))
-                } else {
-                    shape.fill(Theme.fill1)
-                }
-            }
-            .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous).strokeBorder(Theme.border))
+            // The selected chip is marked by the shared glass bubble drawn behind the row.
+            .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(selected ? .clear : Theme.fill1))
+            .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous).strokeBorder(selected ? .clear : Theme.border))
         }
         .buttonStyle(.plain)
     }

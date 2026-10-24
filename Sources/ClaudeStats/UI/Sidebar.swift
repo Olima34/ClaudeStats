@@ -22,14 +22,18 @@ struct Sidebar: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 1) {
-                    ForEach(Page.groups, id: \.0) { group in
-                        GroupLabel(text: group.0)
-                        ForEach(group.1) { p in
-                            SidebarItem(symbol: p.symbol, title: p.title, selected: model.page == p) {
-                                model.page = p
+                    VStack(alignment: .leading, spacing: 1) {
+                        ForEach(Page.groups, id: \.0) { group in
+                            GroupLabel(text: group.0)
+                            ForEach(group.1) { p in
+                                SidebarItem(symbol: p.symbol, title: p.title, selected: model.page == p) {
+                                    model.page = p
+                                }
+                                .liquidItem(p)
                             }
                         }
                     }
+                    .liquidSelection(model.page, axis: .vertical, radius: 8) { model.page = $0 }
 
                     projectsSection
                 }
@@ -44,8 +48,10 @@ struct Sidebar: View {
         }
     }
 
+    private var projects: [ProjectStat] { model.allTime.projects.filter { $0.prompts > 0 } }
+    private var shownProjects: [ProjectStat] { showAllProjects ? projects : Array(projects.prefix(6)) }
+
     @ViewBuilder private var projectsSection: some View {
-        let projects = model.allTime.projects.filter { $0.prompts > 0 }
         if !projects.isEmpty {
             HStack {
                 GroupLabel(text: "Projets")
@@ -60,12 +66,15 @@ struct Sidebar: View {
                 }
             }
 
-            let shown = showAllProjects ? projects : Array(projects.prefix(6))
-            ForEach(shown) { p in
-                SidebarProjectItem(project: p, selected: model.filter.project == p.name) {
-                    model.filter.project = model.filter.project == p.name ? nil : p.name
+            VStack(alignment: .leading, spacing: 1) {
+                ForEach(shownProjects) { p in
+                    SidebarProjectItem(project: p, selected: model.filter.project == p.name) {
+                        model.filter.project = model.filter.project == p.name ? nil : p.name
+                    }
+                    .liquidItem(p.name)
                 }
             }
+            .liquidSelection(model.filter.project, axis: .vertical, radius: 8) { model.filter.project = $0 }
             if projects.count > 6 {
                 Button {
                     withAnimation(.easeOut(duration: 0.2)) { showAllProjects.toggle() }
@@ -227,11 +236,9 @@ private struct SidebarHighlight: View {
     var hovering: Bool
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
-        if selected {
-            shape.fill(Theme.fill3).overlay(TopRim(radius: 8))
-        } else if hovering {
-            shape.fill(Theme.fill1)
+        // The selection itself is drawn by the sidebar's shared glass bubble.
+        if hovering && !selected {
+            RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.fill1)
         }
     }
 }
